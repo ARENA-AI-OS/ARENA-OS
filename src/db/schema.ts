@@ -1,0 +1,170 @@
+import {
+  pgTable,
+  uuid,
+  text,
+  jsonb,
+  timestamp,
+  integer,
+  real,
+  boolean,
+  primaryKey,
+} from "drizzle-orm/pg-core";
+import type { Json } from "@core/types";
+
+// ---------------------------------------------------------------------------
+// Drizzle schema for PostgreSQL. Mirrors the domain model in src/domain.
+// Raw SQL equivalent: see src/db/schema.sql
+// ---------------------------------------------------------------------------
+
+export const workspaces = pgTable("workspaces", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  ownerEmail: text("owner_email").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+export const projects = pgTable("projects", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  name: text("name").notNull(),
+  repository: text("repository"),
+  integrations: jsonb("integrations").$type<Json[]>(),
+  environment: text("environment").notNull().default("development"),
+  budgetXlm: real("budget_xlm").notNull().default(5),
+});
+
+export const missions = pgTable("missions", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull(),
+  phaseOrder: jsonb("phase_order").$type<Json[]>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  workspaceId: text("workspace_id").notNull(),
+  projectId: text("project_id"),
+  tasks: jsonb("tasks").$type<Json[]>(),
+  agents: jsonb("agents").$type<Json[]>(),
+  modelsUsed: jsonb("models_used").$type<string[]>(),
+  toolsUsed: jsonb("tools_used").$type<string[]>(),
+  costUsd: real("cost_usd").notNull().default(0),
+  paymentsXlm: real("payments_xlm").notNull().default(0),
+  filesChanged: integer("files_changed").notNull().default(0),
+  testsPassed: integer("tests_passed").notNull().default(0),
+  testsFailed: integer("tests_failed").notNull().default(0),
+  deploymentUrl: text("deployment_url"),
+  verificationStatus: text("verification_status").notNull().default("unverified"),
+  finalResult: text("final_result"),
+  receiptHash: text("receipt_hash"),
+  stellarTx: text("stellar_tx"),
+});
+
+export const integrations = pgTable("integrations", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  type: text("type").notNull(),
+  name: text("name").notNull(),
+  connected: boolean("connected").notNull().default(false),
+  meta: jsonb("meta").$type<Json>(),
+});
+
+export const payments = pgTable("payments", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id"),
+  service: text("service").notNull(),
+  purpose: text("purpose").notNull(),
+  amountXlm: real("amount_xlm").notNull(),
+  asset: text("asset").notNull(),
+  network: text("network").notNull(),
+  wallet: text("wallet").notNull(),
+  recipient: text("recipient").notNull(),
+  status: text("status").notNull(),
+  txHash: text("tx_hash"),
+  receiptHash: text("receipt_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  settledAt: timestamp("settled_at", { withTimezone: true }),
+});
+
+export const stellarTransactions = pgTable("stellar_transactions", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id"),
+  kind: text("kind").notNull(),
+  txHash: text("tx_hash").notNull(),
+  network: text("network").notNull(),
+  status: text("status").notNull(),
+  amountXlm: real("amount_xlm"),
+  receiptHash: text("receipt_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+export const receipts = pgTable("receipts", {
+  hash: text("hash").primaryKey(),
+  missionDigest: text("mission_digest").notNull(),
+  submitter: text("submitter").notNull(),
+  timestamp: text("timestamp").notNull(),
+  status: text("status").notNull(),
+  paymentReference: text("payment_reference"),
+  anchorTx: text("anchor_tx"),
+});
+
+export const auditEvents = pgTable("audit_events", {
+  id: text("id").primaryKey(),
+  at: timestamp("at", { withTimezone: true }).notNull(),
+  actor: text("actor").notNull(),
+  action: text("action").notNull(),
+  missionId: text("mission_id"),
+  detail: jsonb("detail").$type<Json>(),
+});
+
+export const memories = pgTable("memories", {
+  id: text("id").primaryKey(),
+  scope: text("scope").notNull(),
+  scopeId: text("scope_id").notNull(),
+  source: text("source").notNull(),
+  content: text("content").notNull(),
+  confidence: real("confidence").notNull().default(0.5),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+export const apiKeys = pgTable("api_keys", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  name: text("name").notNull(),
+  environment: text("environment").notNull(),
+  prefix: text("prefix").notNull(),
+  scopes: jsonb("scopes").$type<string[]>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  revoked: boolean("revoked").notNull().default(false),
+});
+
+export const modelProviders = pgTable("model_providers", {
+  provider: text("provider").primaryKey(),
+  label: text("label").notNull(),
+  connected: boolean("connected").notNull().default(false),
+  models: jsonb("models").$type<string[]>(),
+});
+
+export const agentRuns = pgTable("agent_runs", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id").notNull(),
+  role: text("role").notNull(),
+  model: text("model"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  status: text("status").notNull(),
+  summary: text("summary"),
+});
+
+export const toolRuns = pgTable("tool_runs", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id"),
+  tool: text("tool").notNull(),
+  input: jsonb("input").$type<Json>(),
+  output: jsonb("output").$type<Json>(),
+  status: text("status").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  error: text("error"),
+});
