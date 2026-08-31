@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@core/*": ["./src/core/*"],
+      "@domain/*": ["./src/domain/*"],
+      "@ai/*": ["./src/ai/*"],
+      "@agents/*": ["./src/agents/*"],
+      "@tools/*": ["./src/tools/*"],
+      "@stellar/*": ["./src/stellar/*"],
+      "@mission/*": ["./src/mission/*"],
+      "@security/*": ["./src/security/*"],
+      "@db/*": ["./src/db/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@arena-os/security": ["../../packages/security/src"],
+      "@arena-os/database": ["../../packages/database/src"],
+      "@arena-os/ai-core": ["../../packages/ai-core/src"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

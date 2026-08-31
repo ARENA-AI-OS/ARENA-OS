@@ -1,0 +1,18 @@
+{
+  "name": "@arena-os/stellar",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@arena-os/security": "workspace:*",
+    "@stellar/stellar-sdk": "^12.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

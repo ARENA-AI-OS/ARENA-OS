@@ -1,0 +1,19 @@
+{
+  "name": "@arena-os/agent-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@arena-os/ai-core": "workspace:*",
+    "@arena-os/security": "workspace:*",
+    "@arena-os/tool-gateway": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

@@ -22,6 +22,8 @@ export default async function CommandCenter() {
   const awaiting = missions.filter((m) => m.status === "awaiting_approval");
 
   const aiUsage = aggregateModels(missions);
+  const providerCosts = aggregateProviderCosts(missions);
+  const totalCost = missions.reduce((sum, m) => sum + m.costUsd, 0);
   const toolUsage = aggregateTools(missions);
   const todayPayments = payments.filter((p) => isToday(p.createdAt)).reduce((s, p) => s + p.amountXlm, 0);
 
@@ -59,27 +61,59 @@ export default async function CommandCenter() {
 
           <div className="space-y-6">
             <Panel>
-              <PanelHeader title="AI Usage" />
-              <div className="p-4 space-y-2">
-                {aiUsage.map((u) => (
-                  <div key={u.model} className="flex items-center justify-between text-sm">
-                    <span className="text-arena-muted">{u.model}</span>
-                    <span className="font-mono text-arena-text">${u.cost.toFixed(2)}</span>
+              <PanelHeader title="AI Usage" subtitle="Cost breakdown by provider" />
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-arena-muted uppercase">Total Cost</span>
+                  <span className="font-mono text-sm text-arena-blue">${totalCost.toFixed(2)}</span>
+                </div>
+                <div className="h-px bg-arena-border" />
+                {providerCosts.map((p) => (
+                  <div key={p.provider} className="flex items-center justify-between text-sm">
+                    <span className="text-arena-muted capitalize">{p.provider}</span>
+                    <span className="font-mono text-arena-text">${p.cost.toFixed(2)}</span>
                   </div>
                 ))}
-                {aiUsage.length === 0 && <div className="text-sm text-arena-muted">No usage yet.</div>}
+                {providerCosts.length === 0 && <div className="text-sm text-arena-muted">No usage yet.</div>}
+                {aiUsage.length > 0 && (
+                  <>
+                    <div className="h-px bg-arena-border" />
+                    <div className="text-xs text-arena-muted uppercase">By Model</div>
+                    {aiUsage.map((u) => (
+                      <div key={u.model} className="flex items-center justify-between text-xs">
+                        <span className="text-arena-muted font-mono">{u.model}</span>
+                        <span className="font-mono text-arena-text">${u.cost.toFixed(4)}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </Panel>
             <Panel>
-              <PanelHeader title="Tool Activity" />
+              <PanelHeader title="Tool Activity" subtitle="Gateway-mediated external calls" />
               <div className="p-4 space-y-2">
-                {toolUsage.map((u) => (
-                  <div key={u.tool} className="flex items-center justify-between text-sm">
-                    <span className="text-arena-muted font-mono text-xs">{u.tool}</span>
-                    <span className="font-mono text-arena-text">{u.calls}</span>
-                  </div>
-                ))}
+                {toolUsage.slice(0, 8).map((u) => {
+                  const provider = u.tool.split(".")[0];
+                  const providerTone: Record<string, string> = {
+                    github: "violet",
+                    terminal: "blue",
+                    supabase: "green",
+                    railway: "amber",
+                    firebase: "cyan",
+                    stellar: "cyan",
+                  };
+                  return (
+                    <div key={u.tool} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge tone={(providerTone[provider] ?? "default") as any}>{provider}</Badge>
+                        <span className="text-arena-muted font-mono text-xs">{u.tool}</span>
+                      </div>
+                      <span className="font-mono text-arena-text">{u.calls}</span>
+                    </div>
+                  );
+                })}
                 {toolUsage.length === 0 && <div className="text-sm text-arena-muted">No tool calls yet.</div>}
+                {toolUsage.length > 8 && <div className="text-xs text-arena-muted">+{toolUsage.length - 8} more</div>}
               </div>
             </Panel>
           </div>
@@ -99,7 +133,21 @@ export default async function CommandCenter() {
 function aggregateModels(missions: { modelsUsed: string[]; costUsd: number }[]) {
   const map = new Map<string, number>();
   for (const m of missions) for (const model of m.modelsUsed) map.set(model, (map.get(model) ?? 0) + m.costUsd);
-  return Array.from(map.entries()).map(([model, cost]) => ({ model, cost }));
+  const entries = Array.from(map.entries()).map(([model, cost]) => ({ model, cost }));
+  entries.sort((a, b) => b.cost - a.cost);
+  return entries;
+}
+
+function aggregateProviderCosts(missions: { modelsUsed: string[]; costUsd: number }[]) {
+  const map = new Map<string, number>();
+  for (const m of missions) {
+    const costPerModel = m.costUsd / Math.max(m.modelsUsed.length, 1);
+    for (const model of m.modelsUsed) {
+      const provider = model.split("-")[0]; // extract provider name
+      map.set(provider, (map.get(provider) ?? 0) + costPerModel);
+    }
+  }
+  return Array.from(map.entries()).map(([provider, cost]) => ({ provider, cost })).sort((a, b) => b.cost - a.cost);
 }
 
 function aggregateTools(missions: { toolsUsed: string[] }[]) {

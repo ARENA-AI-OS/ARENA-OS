@@ -1,0 +1,77 @@
+import type {
+  AgentRun,
+  ApiKey,
+  AuditEvent,
+  Integration,
+  Memory,
+  Mission,
+  ModelProviderConfig,
+  Payment,
+  Project,
+  Receipt,
+  StellarTransaction,
+  ToolRun,
+  Workspace,
+} from "@domain/index";
+
+export interface ActivityFilter {
+  agent?: string;
+  model?: string;
+  project?: string;
+  tool?: string;
+  mission?: string;
+  payment?: boolean;
+  stellar?: boolean;
+}
+
+export interface ActivityItem {
+  id: string;
+  at: string;
+  kind: "audit" | "tool" | "payment" | "stellar";
+  actor: string;
+  action: string;
+  missionId?: string;
+  detail?: unknown;
+}
+
+// Single access surface used by the whole application. Swappable backends.
+export interface Repository {
+  getWorkspace(id: string): Promise<Workspace | undefined>;
+  ensureSeedWorkspace(): Promise<Workspace>;
+
+  listProjects(workspaceId: string): Promise<Project[]>;
+  getProject(id: string): Promise<Project | undefined>;
+  createProject(p: Project): Promise<Project>;
+
+  listMissions(workspaceId: string): Promise<Mission[]>;
+  getMission(id: string): Promise<Mission | undefined>;
+  saveMission(m: Mission): Promise<Mission>;
+
+  listIntegrations(workspaceId: string): Promise<Integration[]>;
+  upsertIntegration(i: Integration): Promise<Integration>;
+
+  listPayments(workspaceId?: string): Promise<Payment[]>;
+  savePayment(p: Payment): Promise<Payment>;
+
+  listStellarTx(workspaceId?: string): Promise<StellarTransaction[]>;
+  saveStellarTx(t: StellarTransaction): Promise<StellarTransaction>;
+  saveReceipt(r: Receipt): Promise<Receipt>;
+  getReceipt(hash: string): Promise<Receipt | undefined>;
+
+  listAudit(missionId?: string): Promise<AuditEvent[]>;
+  appendAudit(e: AuditEvent): Promise<AuditEvent>;
+
+  listMemories(scope: Memory["scope"], scopeId: string): Promise<Memory[]>;
+  saveMemory(m: Memory): Promise<Memory>;
+
+  listApiKeys(workspaceId: string): Promise<ApiKey[]>;
+  createApiKey(k: ApiKey): Promise<ApiKey>;
+
+  listModelProviders(): Promise<ModelProviderConfig[]>;
+  upsertModelProvider(p: ModelProviderConfig): Promise<ModelProviderConfig>;
+
+  saveAgentRun(r: AgentRun): Promise<AgentRun>;
+  saveToolRun(r: ToolRun): Promise<ToolRun>;
+
+  listActivity(filter?: ActivityFilter): Promise<ActivityItem[]>;
+}

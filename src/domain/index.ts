@@ -238,15 +238,39 @@ export interface ModelResponse {
 // ---------------------------------------------------------------------------
 
 export type ToolName =
+  // GitHub
   | "github.read_issue"
+  | "github.list_repositories"
+  | "github.read_file"
   | "github.create_branch"
   | "github.modify_files"
   | "github.create_commit"
   | "github.create_pr"
   | "github.read_checks"
+  // Terminal
   | "terminal.run"
+  | "terminal.git_status"
+  | "terminal.git_diff"
+  | "terminal.run_tests"
+  | "terminal.run_build"
+  | "terminal.install_deps"
+  // Supabase
   | "supabase.query"
+  | "supabase.list_tables"
+  | "supabase.describe_table"
+  | "supabase.write_database"
+  | "supabase.delete_record"
+  // Firebase
+  | "firebase.read_firestore"
+  | "firebase.write_firestore"
+  | "firebase.list_documents"
+  | "firebase.get_project"
+  // Railway
+  | "railway.list_projects"
   | "railway.deploy_preview"
+  | "railway.get_deployment_status"
+  | "railway.get_logs"
+  // Payment / Stellar
   | "payment.request"
   | "stellar.anchor_receipt";
 

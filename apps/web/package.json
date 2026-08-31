@@ -1,0 +1,40 @@
+{
+  "name": "@arena-os/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next"
+  },
+  "dependencies": {
+    "@arena-os/ai-core": "workspace:*",
+    "@arena-os/database": "workspace:*",
+    "@arena-os/security": "workspace:*",
+    "@arena-os/stellar": "workspace:*",
+    "@arena-os/x402": "workspace:*",
+    "@stellar/stellar-sdk": "^12.0.0",
+    "drizzle-orm": "^0.33.0",
+    "framer-motion": "^11.3.0",
+    "next": "15.0.3",
+    "postgres": "^3.4.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.19",
+    "drizzle-kit": "^0.24.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.0"
+  }
+}

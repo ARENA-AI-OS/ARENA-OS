@@ -168,3 +168,47 @@ export const toolRuns = pgTable("tool_runs", {
   endedAt: timestamp("ended_at", { withTimezone: true }),
   error: text("error"),
 });
+
+// ---------------------------------------------------------------------------
+// Prompt 2 additions: tasks table, jobs queue table, verification checks
+// ---------------------------------------------------------------------------
+
+export const tasks = pgTable("tasks", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id").notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  agentRole: text("agent_role").notNull(),
+  status: text("status").notNull().default("pending"),
+  dependsOn: jsonb("depends_on").$type<string[]>().default([]),
+  result: jsonb("result").$type<Json>(),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+});
+
+export const jobs = pgTable("jobs", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id").notNull(),
+  type: text("type").notNull(),
+  payload: jsonb("payload").$type<Json>(),
+  status: text("status").notNull().default("pending"),
+  priority: integer("priority").notNull().default(0),
+  attempts: integer("attempts").notNull().default(0),
+  maxAttempts: integer("max_attempts").notNull().default(3),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export const verificationChecks = pgTable("verification_checks", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id").notNull(),
+  name: text("name").notNull(),
+  status: text("status").notNull(),
+  detail: text("detail"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
