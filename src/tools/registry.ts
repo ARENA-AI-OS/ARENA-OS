@@ -171,6 +171,14 @@ export const TOOL_REGISTRY: Record<ToolName, ToolSpec> = {
     requiresProvider: "railway",
   },
 
+  // ── Custom API ──────────────────────────────────────────────────────
+  "custom_api.call": {
+    name: "custom_api.call",
+    capability: "custom_api:can_call",
+    description: "Call a registered custom API endpoint through the gateway.",
+    requiresProvider: undefined,
+  },
+
   // ── Payment / Stellar ───────────────────────────────────────────────────
   "payment.request": {
     name: "payment.request",
@@ -237,6 +245,9 @@ export function validateToolInput(tool: ToolName, input: unknown): string | null
     case "terminal.git_status":
     case "terminal.git_diff":
       return null; // No required params
+    case "custom_api.call":
+      if (!i.apiId) return "missing apiId";
+      return null;
     default:
       return null;
   }

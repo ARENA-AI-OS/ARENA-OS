@@ -10,7 +10,7 @@ export async function research(ctx: AgentContext): Promise<string> {
   const issueRes = await ctx.tools.execute(
     "github.read_issue",
     { repository: ctx.mission.projectId ? undefined : "ARENA-AI-OS/ARENA-OS", issueNumber: 42 } as any,
-    toolCtx(ctx, "research"),
+    toolCtx(ctx, "research" as any),
   );
 
   const analysis = await ctx.model.research(

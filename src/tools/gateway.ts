@@ -11,6 +11,7 @@ import { runRailwayTool } from "./railway";
 import { runFirebaseTool } from "./firebase";
 import { runPaymentTool } from "./payment";
 import { runStellarAnchorTool } from "@stellar/receipt-anchor";
+import { runCustomApiTool } from "./custom-api";
 
 export interface ToolContext {
   missionId?: string;
@@ -141,6 +142,8 @@ async function executeByProvider(
       return runPaymentTool(tool, input, ctx);
     case "stellar":
       return runStellarAnchorTool(tool, input, ctx);
+    case "custom_api":
+      return runCustomApiTool(tool, input, ctx);
     default:
       // Terminal and non-provider tools
       return runTerminalTool(tool, input);

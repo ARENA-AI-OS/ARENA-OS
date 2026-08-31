@@ -212,3 +212,56 @@ export const verificationChecks = pgTable("verification_checks", {
   detail: text("detail"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Prompt 7: Custom API Registry
+// ---------------------------------------------------------------------------
+
+export const customApis = pgTable("custom_apis", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  baseUrl: text("base_url").notNull(),
+  authType: text("auth_type").notNull().default("none"),
+  credentialReference: text("credential_reference").notNull().default(""),
+  requestConfig: jsonb("request_config").$type<Json>().default({}),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  createdBy: text("created_by").notNull(),
+});
+
+export const customApiEndpoints = pgTable("custom_api_endpoints", {
+  id: text("id").primaryKey(),
+  customApiId: text("custom_api_id").notNull(),
+  name: text("name").notNull(),
+  method: text("method").notNull().default("GET"),
+  path: text("path").notNull(),
+  description: text("description").notNull(),
+  paramSchema: jsonb("param_schema").$type<Json>(),
+  costXlm: real("cost_xlm").default(0),
+});
+
+export const agentSlots = pgTable("agent_slots", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  role: text("role").notNull(),
+  isCustom: boolean("is_custom").notNull().default(false),
+  modelPreference: text("model_preference").notNull().default("auto"),
+  budget: real("budget").notNull().default(5),
+  timeoutMs: integer("timeout_ms").notNull().default(120000),
+  retryLimit: integer("retry_limit").notNull().default(2),
+  status: text("status").notNull().default("active"),
+  defaultCapabilities: jsonb("default_capabilities").$type<string[]>().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+export const agentApiAssignments = pgTable("agent_api_assignments", {
+  id: text("id").primaryKey(),
+  customApiId: text("custom_api_id").notNull(),
+  agentId: text("agent_id").notNull(),
+  grantedCapabilities: jsonb("granted_capabilities").$type<string[]>().default(["can_call"]),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull(),
+  assignedBy: text("assigned_by").notNull(),
+});

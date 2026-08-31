@@ -53,7 +53,6 @@ export interface Mission {
   updatedAt: string;
   workspaceId: string;
   projectId?: string;
-  userId?: string;
   tasks: Task[];
   agents: AgentRole[];
   modelsUsed: string[];
@@ -94,7 +93,6 @@ export function newMission(input: {
   description: string;
   workspaceId: string;
   projectId?: string;
-  userId?: string;
 }): Mission {
   return {
     id: shortId("AOS"),
@@ -240,24 +238,50 @@ export interface ModelResponse {
 // ---------------------------------------------------------------------------
 
 export type ToolName =
+  // GitHub
   | "github.read_issue"
+  | "github.list_repositories"
+  | "github.read_file"
   | "github.create_branch"
   | "github.modify_files"
   | "github.create_commit"
   | "github.create_pr"
   | "github.read_checks"
+  // Terminal
   | "terminal.run"
+  | "terminal.git_status"
+  | "terminal.git_diff"
+  | "terminal.run_tests"
+  | "terminal.run_build"
+  | "terminal.install_deps"
+  // Supabase
   | "supabase.query"
+  | "supabase.list_tables"
+  | "supabase.describe_table"
+  | "supabase.write_database"
+  | "supabase.delete_record"
+  // Firebase
+  | "firebase.read_firestore"
+  | "firebase.write_firestore"
+  | "firebase.list_documents"
+  | "firebase.get_project"
+  // Railway
+  | "railway.list_projects"
   | "railway.deploy_preview"
+  | "railway.get_deployment_status"
+  | "railway.get_logs"
+  // Payment / Stellar
   | "payment.request"
-  | "stellar.anchor_receipt";
+  | "stellar.anchor_receipt"
+  // Custom API
+  | "custom_api.call";
 
 export interface ToolSpec {
   name: ToolName;
   capability: Capability;
   description: string;
   // Provider that must be configured for this tool to run for real.
-  requiresProvider?: "github" | "supabase" | "railway" | "stellar" | "x402";
+  requiresProvider?: "github" | "supabase" | "railway" | "firebase" | "stellar" | "x402";
 }
 
 export interface ToolRun {
@@ -398,29 +422,13 @@ export interface ApiKey {
 }
 
 // ---------------------------------------------------------------------------
-// Users
-// ---------------------------------------------------------------------------
-
-export type UserRole = "owner" | "admin" | "member";
-
-export interface User {
-  id: string;
-  email: string;
-  name?: string;
-  role: UserRole;
-  createdAt: string;
-  lastLoginAt?: string;
-}
-
-// ---------------------------------------------------------------------------
 // Projects / Workspaces
 // ---------------------------------------------------------------------------
 
 export interface Workspace {
   id: string;
   name: string;
-  ownerId: string;
-  ownerEmail?: string; // legacy compat; prefer ownerId
+  ownerEmail: string;
   createdAt: string;
 }
 
@@ -432,6 +440,70 @@ export interface Project {
   integrations: IntegrationType[];
   environment: Environment;
   budgetXlm: number;
+}
+
+// ---------------------------------------------------------------------------
+// Custom API Registry (Prompt 7)
+// ---------------------------------------------------------------------------
+
+export type AuthType = "none" | "api_key" | "bearer_token" | "basic" | "oauth2" | "custom_header";
+export type CustomApiStatus = "active" | "disabled";
+
+export interface CustomApi {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string;
+  baseUrl: string;
+  authType: AuthType;
+  // Pointer into the security module — never stores raw secrets
+  credentialReference: string;
+  requestConfig: {
+    headers?: Record<string, string>;
+    defaultParams?: Record<string, string>;
+    rateLimit?: { requests: number; perSeconds: number };
+    timeoutMs?: number;
+  };
+  status: CustomApiStatus;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface CustomApiEndpoint {
+  id: string;
+  customApiId: string;
+  name: string;
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  path: string;
+  description: string;
+  paramSchema?: Json;
+  // Cost in XLM for x402-enabled endpoints (0 = free)
+  costXlm?: number;
+}
+
+export interface AgentSlot {
+  id: string;
+  name: string;
+  description: string;
+  role: string;
+  isCustom: boolean;
+  modelPreference: string;
+  budget: number;
+  timeoutMs: number;
+  retryLimit: number;
+  status: "active" | "disabled";
+  // Capabilities this agent slot has by default
+  defaultCapabilities: Capability[];
+  createdAt: string;
+}
+
+export interface AgentApiAssignment {
+  id: string;
+  customApiId: string;
+  agentId: string;
+  grantedCapabilities: string[]; // e.g. ["can_call", "can_spend_via_x402"]
+  assignedAt: string;
+  assignedBy: string;
 }
 
 // Helper constructors

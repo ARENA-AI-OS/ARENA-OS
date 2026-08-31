@@ -39,19 +39,33 @@ export interface MissionReport {
   pendingPayment?: any;
 }
 
-async function ctxFor(mission: Mission): Promise<AgentContext> {
+async function ctxFor(mission: Mission, role?: string): Promise<AgentContext> {
   const repo = getRepository();
   const model = getModelGateway();
   const tools = getToolGateway();
   const emit = async (actor: any, action: string, detail?: unknown) => {
     await repo.appendAudit({ id: shortId("AE"), at: nowIso(), actor, action, missionId: mission.id, detail: detail as any });
   };
+
+  // Look up agent slot for capabilities
+  let agentSlot = undefined;
+  let capabilities = capabilitiesFor("code");
+
+  if (role) {
+    const slots = await repo.listAgentSlots();
+    agentSlot = slots.find((s) => s.id === `slot_${role}` || s.role === role);
+    if (agentSlot) {
+      capabilities = agentSlot.defaultCapabilities || capabilitiesFor(role as any);
+    }
+  }
+
   return {
     mission,
     repo,
     model,
     tools,
-    capabilities: capabilitiesFor("code"),
+    capabilities,
+    agentSlot,
     emit,
   };
 }
@@ -80,7 +94,6 @@ export async function runMission(missionId: string): Promise<MissionReport> {
   const repo = getRepository();
   const mission = await repo.getMission(missionId);
   if (!mission) throw new Error("mission not found");
-  const ctx = await ctxFor(mission);
   const stagesOut: MissionReport["stages"] = [];
 
   let idx = mission.pipelineStage ? STAGES.indexOf(mission.pipelineStage) : 0;
@@ -97,11 +110,14 @@ export async function runMission(missionId: string): Promise<MissionReport> {
     let summary = "";
     if (stage === "commander") {
       mission.status = "planning";
+      const ctx = await ctxFor(mission, "commander");
       summary = await runAgent("commander", ctx);
     } else if (stage === "research") {
       mission.status = "research";
+      const ctx = await ctxFor(mission, "research");
       summary = await runAgent("research", ctx);
     } else if (stage === "payment") {
+      const ctx = await ctxFor(mission, "code");
       summary = await runPaymentStage(mission, ctx, stagesOut);
       // payment stage may pause; if it returned a pending payment, stop.
       const pending = (mission.pendingPayment as any) || null;
@@ -113,15 +129,19 @@ export async function runMission(missionId: string): Promise<MissionReport> {
       }
     } else if (stage === "code") {
       mission.status = "coding";
+      const ctx = await ctxFor(mission, "code");
       summary = await runAgent("code", ctx);
     } else if (stage === "qa") {
       mission.status = "testing";
+      const ctx = await ctxFor(mission, "qa");
       summary = await runAgent("qa", ctx);
       if (mission.status === "failed") break;
     } else if (stage === "deployment") {
       mission.status = "deployment";
+      const ctx = await ctxFor(mission, "deployment");
       summary = await runAgent("deployment", ctx);
     } else if (stage === "verification") {
+      const ctx = await ctxFor(mission, "verification");
       const v = await verify(mission, ctx);
       mission.verificationStatus = v.status;
       summary = `Verification ${v.status}`;
@@ -133,6 +153,7 @@ export async function runMission(missionId: string): Promise<MissionReport> {
       }
     } else if (stage === "stellar") {
       mission.status = "verification";
+      const ctx = await ctxFor(mission, "stellar");
       summary = await runAgent("stellar", ctx);
     }
 
@@ -149,7 +170,8 @@ export async function runMission(missionId: string): Promise<MissionReport> {
   mission.pipelineStage = "done";
   await repo.saveMission(mission);
 
-  const v = await verify(mission, ctx);
+  const finalCtx = await ctxFor(mission, "verification");
+  const v = await verify(mission, finalCtx);
   return buildReport(mission, stagesOut, v);
 }
 

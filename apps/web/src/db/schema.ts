@@ -1,39 +1,27 @@
 import {
   pgTable,
+  uuid,
   text,
   jsonb,
   timestamp,
   integer,
   real,
   boolean,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import type { Json } from "@core/types";
 
 // ---------------------------------------------------------------------------
-// Drizzle schema for PostgreSQL — Arena OS
-// All tables and relations for the full domain model.
+// Drizzle schema for PostgreSQL. Mirrors the domain model in src/domain.
+// Raw SQL equivalent: see src/db/schema.sql
 // ---------------------------------------------------------------------------
-
-// --- Users & Workspaces ---------------------------------------------------
-
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  email: text("email").notNull().unique(),
-  name: text("name"),
-  passwordHash: text("password_hash").notNull(),
-  role: text("role").notNull().default("member"), // owner | admin | member
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
-});
 
 export const workspaces = pgTable("workspaces", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  ownerId: text("owner_id").notNull(), // references users.id
+  ownerEmail: text("owner_email").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
-
-// --- Projects & Missions --------------------------------------------------
 
 export const projects = pgTable("projects", {
   id: text("id").primaryKey(),
@@ -55,7 +43,6 @@ export const missions = pgTable("missions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
   workspaceId: text("workspace_id").notNull(),
   projectId: text("project_id"),
-  userId: text("user_id").notNull().default("dev"), // references users.id
   tasks: jsonb("tasks").$type<Json[]>(),
   agents: jsonb("agents").$type<Json[]>(),
   modelsUsed: jsonb("models_used").$type<string[]>(),
@@ -72,115 +59,6 @@ export const missions = pgTable("missions", {
   stellarTx: text("stellar_tx"),
 });
 
-// --- Tasks (standalone, linked to missions) -------------------------------
-
-export const tasks = pgTable("tasks", {
-  id: text("id").primaryKey(),
-  missionId: text("mission_id").notNull(),
-  type: text("type").notNull(), // plan | research | code | qa | deploy | stellar | payment | verify
-  title: text("title").notNull(),
-  agentRole: text("agent_role").notNull(),
-  status: text("status").notNull().default("pending"), // pending | running | done | failed | skipped
-  dependsOn: jsonb("depends_on").$type<string[]>(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-  result: jsonb("result").$type<Json>(),
-  error: text("error"),
-});
-
-// --- Agents (registry of available agents) --------------------------------
-
-export const agents = pgTable("agents", {
-  role: text("role").primaryKey(), // commander | research | code | qa | deployment | stellar
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  defaultCapabilities: jsonb("default_capabilities").$type<string[]>(),
-  defaultModelRole: text("default_model_role").notNull().default("any"),
-  enabled: boolean("enabled").notNull().default(true),
-});
-
-// --- Models & Providers ---------------------------------------------------
-
-export const modelProviders = pgTable("model_providers", {
-  provider: text("provider").primaryKey(),
-  label: text("label").notNull(),
-  connected: boolean("connected").notNull().default(false),
-  models: jsonb("models").$type<string[]>(),
-});
-
-export const models = pgTable("models", {
-  id: text("id").primaryKey(),
-  provider: text("provider").notNull(),
-  modelId: text("model_id").notNull(),
-  label: text("label").notNull(),
-  taskKinds: jsonb("task_kinds").$type<string[]>(), // research | code | simple | reasoning | any
-  maxTokens: integer("max_tokens"),
-  costPer1kInput: real("cost_per_1k_input"),
-  costPer1kOutput: real("cost_per_1k_output"),
-  enabled: boolean("enabled").notNull().default(true),
-});
-
-// --- Tools & Permissions --------------------------------------------------
-
-export const tools = pgTable("tools", {
-  name: text("name").primaryKey(),
-  capability: text("capability").notNull(),
-  description: text("description").notNull(),
-  requiresProvider: text("requires_provider"),
-  enabled: boolean("enabled").notNull().default(true),
-});
-
-export const toolPermissions = pgTable("tool_permissions", {
-  id: text("id").primaryKey(),
-  agentRole: text("agent_role").notNull(),
-  toolName: text("tool_name").notNull(),
-  allowed: boolean("allowed").notNull().default(true),
-  requiresApproval: boolean("requires_approval").notNull().default(false),
-});
-
-// --- Secrets (encrypted store metadata) -----------------------------------
-
-export const secrets = pgTable("secrets", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  encryptedValue: text("encrypted_value").notNull(),
-  iv: text("iv").notNull(),
-  tag: text("tag").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
-  lastAccessedBy: text("last_accessed_by"),
-  expiresAt: timestamp("expires_at", { withTimezone: true }),
-});
-
-// --- Workflows & Workflow Runs --------------------------------------------
-
-export const workflows = pgTable("workflows", {
-  id: text("id").primaryKey(),
-  workspaceId: text("workspace_id").notNull(),
-  name: text("name").notNull(),
-  description: text("description"),
-  steps: jsonb("steps").$type<Json[]>().notNull(), // ordered list of step definitions
-  triggers: jsonb("triggers").$type<Json[]>(), // what triggers this workflow
-  enabled: boolean("enabled").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-});
-
-export const workflowRuns = pgTable("workflow_runs", {
-  id: text("id").primaryKey(),
-  workflowId: text("workflow_id").notNull(),
-  status: text("status").notNull().default("pending"), // pending | running | completed | failed
-  triggeredBy: text("triggered_by").notNull(), // user_id or "system"
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
-  endedAt: timestamp("ended_at", { withTimezone: true }),
-  stepsCompleted: integer("steps_completed").notNull().default(0),
-  stepsTotal: integer("steps_total").notNull().default(0),
-  result: jsonb("result").$type<Json>(),
-  error: text("error"),
-});
-
-// --- Integrations ---------------------------------------------------------
-
 export const integrations = pgTable("integrations", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull(),
@@ -189,48 +67,6 @@ export const integrations = pgTable("integrations", {
   connected: boolean("connected").notNull().default(false),
   meta: jsonb("meta").$type<Json>(),
 });
-
-// --- API Keys -------------------------------------------------------------
-
-export const apiKeys = pgTable("api_keys", {
-  id: text("id").primaryKey(),
-  workspaceId: text("workspace_id").notNull(),
-  name: text("name").notNull(),
-  environment: text("environment").notNull(),
-  prefix: text("prefix").notNull(),
-  scopes: jsonb("scopes").$type<string[]>(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
-  expiresAt: timestamp("expires_at", { withTimezone: true }),
-  revoked: boolean("revoked").notNull().default(false),
-});
-
-// --- Agent & Tool Runs (execution logs) -----------------------------------
-
-export const agentRuns = pgTable("agent_runs", {
-  id: text("id").primaryKey(),
-  missionId: text("mission_id").notNull(),
-  role: text("role").notNull(),
-  model: text("model"),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
-  endedAt: timestamp("ended_at", { withTimezone: true }),
-  status: text("status").notNull(),
-  summary: text("summary"),
-});
-
-export const toolRuns = pgTable("tool_runs", {
-  id: text("id").primaryKey(),
-  missionId: text("mission_id"),
-  tool: text("tool").notNull(),
-  input: jsonb("input").$type<Json>(),
-  output: jsonb("output").$type<Json>(),
-  status: text("status").notNull(),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
-  endedAt: timestamp("ended_at", { withTimezone: true }),
-  error: text("error"),
-});
-
-// --- Payments & Stellar ---------------------------------------------------
 
 export const payments = pgTable("payments", {
   id: text("id").primaryKey(),
@@ -247,22 +83,6 @@ export const payments = pgTable("payments", {
   receiptHash: text("receipt_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   settledAt: timestamp("settled_at", { withTimezone: true }),
-});
-
-export const paymentPolicies = pgTable("payment_policies", {
-  id: text("id").primaryKey(),
-  workspaceId: text("workspace_id").notNull(),
-  name: text("name").notNull(),
-  perRequestXlm: real("per_request_xlm").notNull().default(1),
-  perMissionXlm: real("per_mission_xlm").notNull().default(5),
-  perDayXlm: real("per_day_xlm").notNull().default(20),
-  allowedServices: jsonb("allowed_services").$type<string[]>(),
-  allowedRecipients: jsonb("allowed_recipients").$type<string[]>(),
-  approvalThresholdXlm: real("approval_threshold_xlm").notNull().default(0.5),
-  asset: text("asset").notNull().default("XLM"),
-  network: text("network").notNull().default("testnet"),
-  isDefault: boolean("is_default").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
 
 export const stellarTransactions = pgTable("stellar_transactions", {
@@ -287,8 +107,6 @@ export const receipts = pgTable("receipts", {
   anchorTx: text("anchor_tx"),
 });
 
-// --- Audit & Memory -------------------------------------------------------
-
 export const auditEvents = pgTable("audit_events", {
   id: text("id").primaryKey(),
   at: timestamp("at", { withTimezone: true }).notNull(),
@@ -306,4 +124,144 @@ export const memories = pgTable("memories", {
   content: text("content").notNull(),
   confidence: real("confidence").notNull().default(0.5),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+export const apiKeys = pgTable("api_keys", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  name: text("name").notNull(),
+  environment: text("environment").notNull(),
+  prefix: text("prefix").notNull(),
+  scopes: jsonb("scopes").$type<string[]>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  revoked: boolean("revoked").notNull().default(false),
+});
+
+export const modelProviders = pgTable("model_providers", {
+  provider: text("provider").primaryKey(),
+  label: text("label").notNull(),
+  connected: boolean("connected").notNull().default(false),
+  models: jsonb("models").$type<string[]>(),
+});
+
+export const agentRuns = pgTable("agent_runs", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id").notNull(),
+  role: text("role").notNull(),
+  model: text("model"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  status: text("status").notNull(),
+  summary: text("summary"),
+});
+
+export const toolRuns = pgTable("tool_runs", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id"),
+  tool: text("tool").notNull(),
+  input: jsonb("input").$type<Json>(),
+  output: jsonb("output").$type<Json>(),
+  status: text("status").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  error: text("error"),
+});
+
+// ---------------------------------------------------------------------------
+// Prompt 2 additions: tasks table, jobs queue table, verification checks
+// ---------------------------------------------------------------------------
+
+export const tasks = pgTable("tasks", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id").notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  agentRole: text("agent_role").notNull(),
+  status: text("status").notNull().default("pending"),
+  dependsOn: jsonb("depends_on").$type<string[]>().default([]),
+  result: jsonb("result").$type<Json>(),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+});
+
+export const jobs = pgTable("jobs", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id").notNull(),
+  type: text("type").notNull(),
+  payload: jsonb("payload").$type<Json>(),
+  status: text("status").notNull().default("pending"),
+  priority: integer("priority").notNull().default(0),
+  attempts: integer("attempts").notNull().default(0),
+  maxAttempts: integer("max_attempts").notNull().default(3),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export const verificationChecks = pgTable("verification_checks", {
+  id: text("id").primaryKey(),
+  missionId: text("mission_id").notNull(),
+  name: text("name").notNull(),
+  status: text("status").notNull(),
+  detail: text("detail"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Prompt 7: Custom API Registry
+// ---------------------------------------------------------------------------
+
+export const customApis = pgTable("custom_apis", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  baseUrl: text("base_url").notNull(),
+  authType: text("auth_type").notNull().default("none"),
+  credentialReference: text("credential_reference").notNull().default(""),
+  requestConfig: jsonb("request_config").$type<Json>().default({}),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  createdBy: text("created_by").notNull(),
+});
+
+export const customApiEndpoints = pgTable("custom_api_endpoints", {
+  id: text("id").primaryKey(),
+  customApiId: text("custom_api_id").notNull(),
+  name: text("name").notNull(),
+  method: text("method").notNull().default("GET"),
+  path: text("path").notNull(),
+  description: text("description").notNull(),
+  paramSchema: jsonb("param_schema").$type<Json>(),
+  costXlm: real("cost_xlm").default(0),
+});
+
+export const agentSlots = pgTable("agent_slots", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  role: text("role").notNull(),
+  isCustom: boolean("is_custom").notNull().default(false),
+  modelPreference: text("model_preference").notNull().default("auto"),
+  budget: real("budget").notNull().default(5),
+  timeoutMs: integer("timeout_ms").notNull().default(120000),
+  retryLimit: integer("retry_limit").notNull().default(2),
+  status: text("status").notNull().default("active"),
+  defaultCapabilities: jsonb("default_capabilities").$type<string[]>().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+export const agentApiAssignments = pgTable("agent_api_assignments", {
+  id: text("id").primaryKey(),
+  customApiId: text("custom_api_id").notNull(),
+  agentId: text("agent_id").notNull(),
+  grantedCapabilities: jsonb("granted_capabilities").$type<string[]>().default(["can_call"]),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull(),
+  assignedBy: text("assigned_by").notNull(),
 });

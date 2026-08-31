@@ -1,7 +1,11 @@
 import type {
   AgentRun,
+  AgentApiAssignment,
+  AgentSlot,
   ApiKey,
   AuditEvent,
+  CustomApi,
+  CustomApiEndpoint,
   Integration,
   Memory,
   Mission,
@@ -13,6 +17,7 @@ import type {
   ToolRun,
   Workspace,
 } from "@domain/index";
+import { AGENT_REGISTRY } from "@domain/index";
 import type {
   ActivityFilter,
   ActivityItem,
@@ -41,12 +46,15 @@ class MemoryRepository implements Repository {
   private modelProviders: ModelProviderConfig[] = [];
   private agentRuns: AgentRun[] = [];
   private toolRuns: ToolRun[] = [];
+  private customApis: CustomApi[] = [];
+  private customApiEndpoints: CustomApiEndpoint[] = [];
+  private agentSlots: AgentSlot[] = [];
+  private agentApiAssignments: AgentApiAssignment[] = [];
 
   constructor(seedEmail: string) {
     this.workspace = {
       id: "ws_seed",
       name: "Arena Workspace",
-      ownerId: `user_${seedEmail.replace(/[^a-z0-9]/gi, "_")}`,
       ownerEmail: seedEmail,
       createdAt: nowIso(),
     };
@@ -186,6 +194,24 @@ class MemoryRepository implements Repository {
       confidence: 0.9,
       createdAt: nowIso(),
     });
+
+    // Seed the six built-in agent slots
+    for (const [role, spec] of Object.entries(AGENT_REGISTRY)) {
+      this.agentSlots.push({
+        id: `slot_${role}`,
+        name: spec.name,
+        description: spec.description,
+        role,
+        isCustom: false,
+        modelPreference: "auto",
+        budget: 5,
+        timeoutMs: 120000,
+        retryLimit: 2,
+        status: "active",
+        defaultCapabilities: spec.defaultCapabilities,
+        createdAt: nowIso(),
+      });
+    }
   }
 
   async getWorkspace(id: string) {
@@ -301,6 +327,74 @@ class MemoryRepository implements Repository {
     return r;
   }
 
+  // ── Custom API Registry ──────────────────────────────────────────────
+  async listCustomApis(workspaceId: string) {
+    return this.customApis.filter((a) => a.workspaceId === workspaceId);
+  }
+  async getCustomApi(id: string) {
+    return this.customApis.find((a) => a.id === id);
+  }
+  async saveCustomApi(api: CustomApi) {
+    const idx = this.customApis.findIndex((a) => a.id === api.id);
+    if (idx >= 0) this.customApis[idx] = api;
+    else this.customApis.push(api);
+    return api;
+  }
+  async deleteCustomApi(id: string) {
+    this.customApis = this.customApis.filter((a) => a.id !== id);
+    this.customApiEndpoints = this.customApiEndpoints.filter((e) => e.customApiId !== id);
+    this.agentApiAssignments = this.agentApiAssignments.filter((a) => a.customApiId !== id);
+  }
+
+  async listCustomApiEndpoints(apiId: string) {
+    return this.customApiEndpoints.filter((e) => e.customApiId === apiId);
+  }
+  async saveCustomApiEndpoint(ep: CustomApiEndpoint) {
+    const idx = this.customApiEndpoints.findIndex((e) => e.id === ep.id);
+    if (idx >= 0) this.customApiEndpoints[idx] = ep;
+    else this.customApiEndpoints.push(ep);
+    return ep;
+  }
+  async deleteCustomApiEndpoint(id: string) {
+    this.customApiEndpoints = this.customApiEndpoints.filter((e) => e.id !== id);
+  }
+
+  // ── Agent Slots ──────────────────────────────────────────────────────
+  async listAgentSlots() {
+    return [...this.agentSlots];
+  }
+  async getAgentSlot(id: string) {
+    return this.agentSlots.find((s) => s.id === id);
+  }
+  async saveAgentSlot(slot: AgentSlot) {
+    const idx = this.agentSlots.findIndex((s) => s.id === slot.id);
+    if (idx >= 0) this.agentSlots[idx] = slot;
+    else this.agentSlots.push(slot);
+    return slot;
+  }
+  async deleteAgentSlot(id: string) {
+    this.agentSlots = this.agentSlots.filter((s) => s.id !== id);
+  }
+
+  // ── Agent-API Assignments ────────────────────────────────────────────
+  async listAgentApiAssignments(agentId?: string) {
+    if (agentId) return this.agentApiAssignments.filter((a) => a.agentId === agentId);
+    return [...this.agentApiAssignments];
+  }
+  async getAgentApiAssignment(id: string) {
+    return this.agentApiAssignments.find((a) => a.id === id);
+  }
+  async saveAgentApiAssignment(a: AgentApiAssignment) {
+    const idx = this.agentApiAssignments.findIndex((x) => x.id === a.id);
+    if (idx >= 0) this.agentApiAssignments[idx] = a;
+    else this.agentApiAssignments.push(a);
+    return a;
+  }
+  async deleteAgentApiAssignment(id: string) {
+    this.agentApiAssignments = this.agentApiAssignments.filter((a) => a.id !== id);
+  }
+
+  // ── Activity ─────────────────────────────────────────────────────────
   async listActivity(filter?: ActivityFilter): Promise<ActivityItem[]> {
     const items: ActivityItem[] = [];
     for (const a of this.audit) {

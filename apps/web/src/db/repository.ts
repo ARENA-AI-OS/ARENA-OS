@@ -1,7 +1,11 @@
 import type {
   AgentRun,
+  AgentApiAssignment,
+  AgentSlot,
   ApiKey,
   AuditEvent,
+  CustomApi,
+  CustomApiEndpoint,
   Integration,
   Memory,
   Mission,
@@ -72,6 +76,28 @@ export interface Repository {
 
   saveAgentRun(r: AgentRun): Promise<AgentRun>;
   saveToolRun(r: ToolRun): Promise<ToolRun>;
+
+  // Custom API Registry
+  listCustomApis(workspaceId: string): Promise<CustomApi[]>;
+  getCustomApi(id: string): Promise<CustomApi | undefined>;
+  saveCustomApi(api: CustomApi): Promise<CustomApi>;
+  deleteCustomApi(id: string): Promise<void>;
+
+  listCustomApiEndpoints(apiId: string): Promise<CustomApiEndpoint[]>;
+  saveCustomApiEndpoint(ep: CustomApiEndpoint): Promise<CustomApiEndpoint>;
+  deleteCustomApiEndpoint(id: string): Promise<void>;
+
+  // Agent Slots
+  listAgentSlots(): Promise<AgentSlot[]>;
+  getAgentSlot(id: string): Promise<AgentSlot | undefined>;
+  saveAgentSlot(slot: AgentSlot): Promise<AgentSlot>;
+  deleteAgentSlot(id: string): Promise<void>;
+
+  // Agent-API Assignments
+  listAgentApiAssignments(agentId?: string): Promise<AgentApiAssignment[]>;
+  getAgentApiAssignment(id: string): Promise<AgentApiAssignment | undefined>;
+  saveAgentApiAssignment(a: AgentApiAssignment): Promise<AgentApiAssignment>;
+  deleteAgentApiAssignment(id: string): Promise<void>;
 
   listActivity(filter?: ActivityFilter): Promise<ActivityItem[]>;
 }

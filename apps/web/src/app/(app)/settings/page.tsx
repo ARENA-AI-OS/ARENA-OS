@@ -39,7 +39,7 @@ export default async function SettingsPage() {
           <Stat label="Workspace" value={ws.name} />
           <Stat label="Database" value={driver} tone="blue" />
           <Stat label="Stellar Net" value={network} tone="violet" />
-          <Stat label="Owner" value={ws.ownerEmail || ws.ownerId} sub="single-developer" />
+          <Stat label="Owner" value={ws.ownerEmail} sub="single-developer" />
         </div>
 
         {/* Provider connections */}

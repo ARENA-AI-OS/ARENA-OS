@@ -272,7 +272,9 @@ export type ToolName =
   | "railway.get_logs"
   // Payment / Stellar
   | "payment.request"
-  | "stellar.anchor_receipt";
+  | "stellar.anchor_receipt"
+  // Custom API
+  | "custom_api.call";
 
 export interface ToolSpec {
   name: ToolName;
@@ -438,6 +440,70 @@ export interface Project {
   integrations: IntegrationType[];
   environment: Environment;
   budgetXlm: number;
+}
+
+// ---------------------------------------------------------------------------
+// Custom API Registry (Prompt 7)
+// ---------------------------------------------------------------------------
+
+export type AuthType = "none" | "api_key" | "bearer_token" | "basic" | "oauth2" | "custom_header";
+export type CustomApiStatus = "active" | "disabled";
+
+export interface CustomApi {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string;
+  baseUrl: string;
+  authType: AuthType;
+  // Pointer into the security module — never stores raw secrets
+  credentialReference: string;
+  requestConfig: {
+    headers?: Record<string, string>;
+    defaultParams?: Record<string, string>;
+    rateLimit?: { requests: number; perSeconds: number };
+    timeoutMs?: number;
+  };
+  status: CustomApiStatus;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface CustomApiEndpoint {
+  id: string;
+  customApiId: string;
+  name: string;
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  path: string;
+  description: string;
+  paramSchema?: Json;
+  // Cost in XLM for x402-enabled endpoints (0 = free)
+  costXlm?: number;
+}
+
+export interface AgentSlot {
+  id: string;
+  name: string;
+  description: string;
+  role: string;
+  isCustom: boolean;
+  modelPreference: string;
+  budget: number;
+  timeoutMs: number;
+  retryLimit: number;
+  status: "active" | "disabled";
+  // Capabilities this agent slot has by default
+  defaultCapabilities: Capability[];
+  createdAt: string;
+}
+
+export interface AgentApiAssignment {
+  id: string;
+  customApiId: string;
+  agentId: string;
+  grantedCapabilities: string[]; // e.g. ["can_call", "can_spend_via_x402"]
+  assignedAt: string;
+  assignedBy: string;
 }
 
 // Helper constructors

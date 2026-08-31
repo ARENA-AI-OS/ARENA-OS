@@ -11,6 +11,7 @@ const SECTIONS = [
   { href: "/models", label: "Models", icon: "◉" },
   { href: "/tools", label: "Tools", icon: "⚙" },
   { href: "/integrations", label: "Integrations", icon: "⧉" },
+  { href: "/custom-apis", label: "Custom APIs", icon: "⊕" },
   { href: "/stellar", label: "Stellar", icon: "✷" },
   { href: "/payments", label: "Payments", icon: "$" },
   { href: "/activity", label: "Activity", icon: "∿" },

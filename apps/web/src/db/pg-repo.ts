@@ -3,8 +3,12 @@ import postgres from "postgres";
 import * as schema from "./schema";
 import type {
   AgentRun,
+  AgentApiAssignment,
+  AgentSlot,
   ApiKey,
   AuditEvent,
+  CustomApi,
+  CustomApiEndpoint,
   Integration,
   Memory,
   Mission,
@@ -196,6 +200,79 @@ export class PgRepository implements Repository {
       items.push({ id: s.id, at: s.createdAt, kind: "stellar", actor: "stellar", action: `stellar:${s.status}`, missionId: s.missionId, detail: s });
     }
     return items.sort((a, b) => b.at.localeCompare(a.at));
+  }
+
+  // ── Custom API Registry ──────────────────────────────────────────────
+  async listCustomApis(workspaceId: string) {
+    return this.safe(async () => {
+      const rows = await this.db.select().from(schema.customApis).where(eqId(schema.customApis.workspaceId, workspaceId));
+      return rows as unknown as CustomApi[];
+    }, []);
+  }
+  async getCustomApi(id: string) {
+    const rows = await this.db.select().from(schema.customApis).where(eqId(schema.customApis.id, id));
+    return rows[0] as unknown as CustomApi | undefined;
+  }
+  async saveCustomApi(api: CustomApi) {
+    await this.db.insert(schema.customApis).values(api as any).onConflictDoUpdate({ target: schema.customApis.id, set: api as any });
+    return api;
+  }
+  async deleteCustomApi(id: string) {
+    await this.db.delete(schema.customApis).where(eqId(schema.customApis.id, id));
+  }
+
+  async listCustomApiEndpoints(apiId: string) {
+    return this.safe(async () => {
+      const rows = await this.db.select().from(schema.customApiEndpoints).where(eqId(schema.customApiEndpoints.customApiId, apiId));
+      return rows as unknown as CustomApiEndpoint[];
+    }, []);
+  }
+  async saveCustomApiEndpoint(ep: CustomApiEndpoint) {
+    await this.db.insert(schema.customApiEndpoints).values(ep as any).onConflictDoUpdate({ target: schema.customApiEndpoints.id, set: ep as any });
+    return ep;
+  }
+  async deleteCustomApiEndpoint(id: string) {
+    await this.db.delete(schema.customApiEndpoints).where(eqId(schema.customApiEndpoints.id, id));
+  }
+
+  // ── Agent Slots ──────────────────────────────────────────────────────
+  async listAgentSlots() {
+    return this.safe(async () => {
+      const rows = await this.db.select().from(schema.agentSlots);
+      return rows as unknown as AgentSlot[];
+    }, []);
+  }
+  async getAgentSlot(id: string) {
+    const rows = await this.db.select().from(schema.agentSlots).where(eqId(schema.agentSlots.id, id));
+    return rows[0] as unknown as AgentSlot | undefined;
+  }
+  async saveAgentSlot(slot: AgentSlot) {
+    await this.db.insert(schema.agentSlots).values(slot as any).onConflictDoUpdate({ target: schema.agentSlots.id, set: slot as any });
+    return slot;
+  }
+  async deleteAgentSlot(id: string) {
+    await this.db.delete(schema.agentSlots).where(eqId(schema.agentSlots.id, id));
+  }
+
+  // ── Agent-API Assignments ────────────────────────────────────────────
+  async listAgentApiAssignments(agentId?: string) {
+    return this.safe(async () => {
+      const rows = agentId
+        ? await this.db.select().from(schema.agentApiAssignments).where(eqId(schema.agentApiAssignments.agentId, agentId))
+        : await this.db.select().from(schema.agentApiAssignments);
+      return rows as unknown as AgentApiAssignment[];
+    }, []);
+  }
+  async getAgentApiAssignment(id: string) {
+    const rows = await this.db.select().from(schema.agentApiAssignments).where(eqId(schema.agentApiAssignments.id, id));
+    return rows[0] as unknown as AgentApiAssignment | undefined;
+  }
+  async saveAgentApiAssignment(a: AgentApiAssignment) {
+    await this.db.insert(schema.agentApiAssignments).values(a as any).onConflictDoUpdate({ target: schema.agentApiAssignments.id, set: a as any });
+    return a;
+  }
+  async deleteAgentApiAssignment(id: string) {
+    await this.db.delete(schema.agentApiAssignments).where(eqId(schema.agentApiAssignments.id, id));
   }
 }
 
