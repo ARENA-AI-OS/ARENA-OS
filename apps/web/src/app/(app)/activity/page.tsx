@@ -1,19 +1,42 @@
-import { PageHeader, Panel } from "@/components/ui";
+import { Panel } from "@/components/ui";
 import { ActivityFeed } from "@/components/activity-feed";
 
-export default function ActivityPage({ searchParams }: { searchParams: Promise<{ mission?: string; agent?: string; tool?: string }> }) {
+export default function ActivityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mission?: string; agent?: string; tool?: string }>;
+}) {
   const params = {
     mission: undefined as string | undefined,
     agent: undefined as string | undefined,
     tool: undefined as string | undefined,
   };
-  // We need to resolve searchParams for the filter display
+
   return (
-    <div className="bg-arena-grid min-h-screen">
-      <PageHeader title="Activity" subtitle="Real-time event stream across agents, tools, payments and Stellar." />
-      <div className="px-4 md:px-6 py-4 md:py-6 space-y-4">
-        {/* Filter info bar */}
-        <ActivityFilterBar />
+    <div className="min-h-screen">
+      <div className="px-6 py-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="arena-label">ACTIVITY / AUDIT</span>
+            <p className="text-[11px] text-arena-secondary mt-0.5">
+              Real-time event stream · agents, tools, payments, Stellar
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <FilterChip label="ALL" active />
+            <FilterChip label="AGENTS" />
+            <FilterChip label="TOOLS" />
+            <FilterChip label="PAYMENTS" />
+            <FilterChip label="STELLAR" />
+            <div className="flex items-center gap-1.5 ml-2">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-arena-green animate-pulse" />
+              <span className="font-mono text-[9px] text-arena-muted">
+                LIVE
+              </span>
+            </div>
+          </div>
+        </div>
+
         <Panel>
           <div className="p-2">
             <ActivityFeed mission={params.mission} />
@@ -24,17 +47,22 @@ export default function ActivityPage({ searchParams }: { searchParams: Promise<{
   );
 }
 
-function ActivityFilterBar() {
+function FilterChip({
+  label,
+  active = false,
+}: {
+  label: string;
+  active?: boolean;
+}) {
   return (
-    <div className="glass rounded-xl px-4 py-3 flex flex-wrap items-center gap-2 text-xs">
-      <span className="text-arena-muted">Filter by:</span>
-      <span className="text-arena-muted/50">Mission</span>
-      <span className="text-arena-border">·</span>
-      <span className="text-arena-muted/50">Agent (coming Prompt 4)</span>
-      <span className="text-arena-border">·</span>
-      <span className="text-arena-muted/50">Tool (coming Prompt 5)</span>
-      <div className="flex-1" />
-      <span className="text-arena-muted font-mono">Live polling: 4s</span>
-    </div>
+    <button
+      className={`px-2 py-1 rounded font-mono text-[9px] transition-colors ${
+        active
+          ? "bg-arena-green/10 text-arena-green border border-arena-green/30"
+          : "bg-arena-inset text-arena-muted border border-arena-border hover:text-arena-secondary"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

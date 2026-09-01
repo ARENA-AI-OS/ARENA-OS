@@ -145,6 +145,70 @@ export const TOOL_REGISTRY: Record<ToolName, ToolSpec> = {
     requiresProvider: "firebase",
   },
 
+  // ── Render ────────────────────────────────────────────────────────────
+  "render.list_projects": {
+    name: "render.list_projects",
+    capability: "render:read_project",
+    description: "List Render services accessible to the token.",
+    requiresProvider: "render",
+  },
+  "render.get_deployment_status": {
+    name: "render.get_deployment_status",
+    capability: "render:read_project",
+    description: "Get deployment status for a Render service.",
+    requiresProvider: "render",
+  },
+  "render.get_logs": {
+    name: "render.get_logs",
+    capability: "render:read_logs",
+    description: "Fetch recent logs from a Render service.",
+    requiresProvider: "render",
+  },
+  "render.deploy_preview": {
+    name: "render.deploy_preview",
+    capability: "render:deploy_preview",
+    description: "Trigger a preview deployment on Render.",
+    requiresProvider: "render",
+  },
+
+  // ── Vercel ──────────────────────────────────────────────────────────────
+  "vercel.list_projects": {
+    name: "vercel.list_projects",
+    capability: "vercel:read_project",
+    description: "List Vercel projects accessible to the token.",
+    requiresProvider: "vercel",
+  },
+  "vercel.get_deployment_status": {
+    name: "vercel.get_deployment_status",
+    capability: "vercel:read_project",
+    description: "Get deployment status for a Vercel deployment.",
+    requiresProvider: "vercel",
+  },
+  "vercel.get_logs": {
+    name: "vercel.get_logs",
+    capability: "vercel:read_logs",
+    description: "Fetch build/function logs for a Vercel deployment.",
+    requiresProvider: "vercel",
+  },
+  "vercel.deploy_preview": {
+    name: "vercel.deploy_preview",
+    capability: "vercel:deploy_preview",
+    description: "Trigger a preview deployment on Vercel.",
+    requiresProvider: "vercel",
+  },
+  "vercel.deploy_production": {
+    name: "vercel.deploy_production",
+    capability: "vercel:deploy_production",
+    description: "Trigger a production deployment on Vercel.",
+    requiresProvider: "vercel",
+  },
+  "vercel.get_domains": {
+    name: "vercel.get_domains",
+    capability: "vercel:read_project",
+    description: "List domains configured for a Vercel project.",
+    requiresProvider: "vercel",
+  },
+
   // ── Railway ─────────────────────────────────────────────────────────────
   "railway.list_projects": {
     name: "railway.list_projects",
@@ -247,6 +311,26 @@ export function validateToolInput(tool: ToolName, input: unknown): string | null
       return null; // No required params
     case "custom_api.call":
       if (!i.apiId) return "missing apiId";
+      return null;
+    case "render.get_deployment_status":
+    case "render.get_logs":
+    case "render.deploy_preview":
+      if (!i.serviceId && !i.service_id) return "missing serviceId";
+      return null;
+    case "render.list_projects":
+      return null;
+    case "vercel.get_deployment_status":
+    case "vercel.get_logs":
+      if (!i.deploymentId && !i.deployment_id) return "missing deploymentId";
+      return null;
+    case "vercel.deploy_preview":
+    case "vercel.deploy_production":
+      if (!i.name && !i.project) return "missing name/project";
+      return null;
+    case "vercel.get_domains":
+      if (!i.projectId && !i.project_id && !i.name) return "missing projectId";
+      return null;
+    case "vercel.list_projects":
       return null;
     default:
       return null;

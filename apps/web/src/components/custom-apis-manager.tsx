@@ -264,11 +264,11 @@ export function CustomApisManager({ apis: initialApis, agentSlots: initialSlots,
           <div className="divide-y divide-arena-border">
             {slots.map((slot) => (
               <div key={slot.id} className="flex items-center gap-4 px-5 py-4">
-                <StatusDot tone={slot.isCustom ? "cyan" : "blue"} />
+                <StatusDot tone={slot.isCustom ? "amber" : "blue"} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-arena-text">{slot.name}</span>
-                    <Badge tone={slot.isCustom ? "cyan" : "default"}>{slot.isCustom ? "custom" : "built-in"}</Badge>
+                    <Badge tone={slot.isCustom ? "amber" : "default"}>{slot.isCustom ? "custom" : "built-in"}</Badge>
                   </div>
                   <div className="text-xs text-arena-muted mt-0.5">{slot.description}</div>
                   <div className="flex items-center gap-3 mt-1 text-[10px] text-arena-muted">

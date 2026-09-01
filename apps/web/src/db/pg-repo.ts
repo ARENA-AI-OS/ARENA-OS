@@ -7,13 +7,17 @@ import type {
   AgentSlot,
   ApiKey,
   AuditEvent,
+  ChatConversation,
+  ChatMessage,
   CustomApi,
+  ExhibitionProject,
   CustomApiEndpoint,
   Integration,
   Memory,
   Mission,
   ModelProviderConfig,
   Payment,
+  PlatformConnection,
   Project,
   Receipt,
   StellarTransaction,
@@ -273,6 +277,80 @@ export class PgRepository implements Repository {
   }
   async deleteAgentApiAssignment(id: string) {
     await this.db.delete(schema.agentApiAssignments).where(eqId(schema.agentApiAssignments.id, id));
+  }
+
+  // Chat Conversations
+  async listChatConversations(workspaceId: string) {
+    return (await this.db.select().from(schema.chatConversations).where(eq(schema.chatConversations.workspaceId, workspaceId)) as any[]).map(this.toChatConversation);
+  }
+  async getChatConversation(id: string) {
+    const rows = await this.db.select().from(schema.chatConversations).where(eq(schema.chatConversations.id, id));
+    return rows[0] ? this.toChatConversation(rows[0]) : undefined;
+  }
+  async saveChatConversation(c: ChatConversation) {
+    await this.db.insert(schema.chatConversations).values(c as any).onConflictDoUpdate({ target: schema.chatConversations.id, set: c as any });
+    return c;
+  }
+  async deleteChatConversation(id: string) {
+    await this.db.delete(schema.chatMessages).where(eq(schema.chatMessages.conversationId, id));
+    await this.db.delete(schema.chatConversations).where(eq(schema.chatConversations.id, id));
+  }
+
+  // Chat Messages
+  async listChatMessages(conversationId: string) {
+    return (await this.db.select().from(schema.chatMessages).where(eq(schema.chatMessages.conversationId, conversationId)) as any[]).map(this.toChatMessage);
+  }
+  async saveChatMessage(m: ChatMessage) {
+    await this.db.insert(schema.chatMessages).values(m as any).onConflictDoUpdate({ target: schema.chatMessages.id, set: m as any });
+    return m;
+  }
+
+  // Platform Connections
+  async listPlatformConnections(workspaceId: string) {
+    return (await this.db.select().from(schema.platformConnections).where(eq(schema.platformConnections.workspaceId, workspaceId)) as any[]).map(this.toPlatformConnection);
+  }
+  async getPlatformConnection(id: string) {
+    const rows = await this.db.select().from(schema.platformConnections).where(eq(schema.platformConnections.id, id));
+    return rows[0] ? this.toPlatformConnection(rows[0]) : undefined;
+  }
+  async savePlatformConnection(p: PlatformConnection) {
+    await this.db.insert(schema.platformConnections).values(p as any).onConflictDoUpdate({ target: schema.platformConnections.id, set: p as any });
+    return p;
+  }
+  async deletePlatformConnection(id: string) {
+    await this.db.delete(schema.platformConnections).where(eq(schema.platformConnections.id, id));
+  }
+
+  // Type mappers
+  private toChatConversation(r: any): ChatConversation {
+    return { ...r, scopes: undefined, createdAt: String(r.createdAt), updatedAt: String(r.updatedAt), lastUsedAt: r.lastUsedAt ? String(r.lastUsedAt) : undefined } as any;
+  }
+  private toChatMessage(r: any): ChatMessage {
+    return { ...r, createdAt: String(r.createdAt) } as any;
+  }
+  private toPlatformConnection(r: any): PlatformConnection {
+    return { ...r, createdAt: String(r.createdAt), lastUsedAt: r.lastUsedAt ? String(r.lastUsedAt) : undefined, lastTestAt: r.lastTestAt ? String(r.lastTestAt) : undefined } as any;
+  }
+
+  // Exhibition Projects
+  async listExhibitionProjects(workspaceId: string, featuredOnly?: boolean) {
+    let rows = await this.db.select().from(schema.exhibitionProjects).where(eq(schema.exhibitionProjects.workspaceId, workspaceId));
+    if (featuredOnly) rows = rows.filter((r: any) => r.featured);
+    return (rows as any[]).map(this.toExhibitionProject);
+  }
+  async getExhibitionProject(id: string) {
+    const rows = await this.db.select().from(schema.exhibitionProjects).where(eq(schema.exhibitionProjects.id, id));
+    return rows[0] ? this.toExhibitionProject(rows[0]) : undefined;
+  }
+  async saveExhibitionProject(p: ExhibitionProject) {
+    await this.db.insert(schema.exhibitionProjects).values(p as any).onConflictDoUpdate({ target: schema.exhibitionProjects.id, set: p as any });
+    return p;
+  }
+  async deleteExhibitionProject(id: string) {
+    await this.db.delete(schema.exhibitionProjects).where(eq(schema.exhibitionProjects.id, id));
+  }
+  private toExhibitionProject(r: any): ExhibitionProject {
+    return { ...r, createdAt: String(r.createdAt), updatedAt: String(r.updatedAt) } as any;
   }
 }
 

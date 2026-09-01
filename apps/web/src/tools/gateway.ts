@@ -12,6 +12,8 @@ import { runFirebaseTool } from "./firebase";
 import { runPaymentTool } from "./payment";
 import { runStellarAnchorTool } from "@stellar/receipt-anchor";
 import { runCustomApiTool } from "./custom-api";
+import { runRenderTool } from "./render";
+import { runVercelTool } from "./vercel";
 
 export interface ToolContext {
   missionId?: string;
@@ -82,6 +84,8 @@ async function executeByProvider(tool: ToolName, input: Json, ctx: ToolContext):
   if (tool.startsWith("terminal.")) return runTerminalTool(tool, input);
   if (tool.startsWith("supabase.")) return runSupabaseTool(tool, input);
   if (tool.startsWith("railway.")) return runRailwayTool(tool, input);
+  if (tool.startsWith("render.")) return runRenderTool(tool, input);
+  if (tool.startsWith("vercel.")) return runVercelTool(tool, input);
   if (tool.startsWith("firebase.")) return runFirebaseTool(tool, input);
   if (tool === "payment.request") return runPaymentTool(tool, input, ctx);
   if (tool === "stellar.anchor_receipt") return runStellarAnchorTool(tool, input, ctx);

@@ -265,3 +265,69 @@ export const agentApiAssignments = pgTable("agent_api_assignments", {
   assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull(),
   assignedBy: text("assigned_by").notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Prompt 8A: Chat conversations + platform connections
+// ---------------------------------------------------------------------------
+
+export const chatConversations = pgTable("chat_conversations", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  projectId: text("project_id"),
+  title: text("title").notNull(),
+  modelProvider: text("model_provider").notNull().default("mock"),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  missionId: text("mission_id"),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: text("id").primaryKey(),
+  conversationId: text("conversation_id").notNull(),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  model: text("model"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+export const platformConnections = pgTable("platform_connections", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  platform: text("platform").notNull(),
+  label: text("label").notNull(),
+  status: text("status").notNull().default("disconnected"),
+  credentialReference: text("credential_reference").notNull().default(""),
+  scopes: jsonb("scopes").$type<Json[]>(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  lastTestAt: timestamp("last_test_at", { withTimezone: true }),
+  lastTestOk: boolean("last_test_ok"),
+  network: text("network"),
+  meta: jsonb("meta").$type<Json>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Prompt 8B: Exhibition projects (public portfolio)
+// ---------------------------------------------------------------------------
+
+export const exhibitionProjects = pgTable("exhibition_projects", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  missionId: text("mission_id"),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  techStack: jsonb("tech_stack").$type<string[]>().default([]),
+  repoUrl: text("repo_url"),
+  liveUrl: text("live_url"),
+  screenshotUrl: text("screenshot_url"),
+  arenaInvolvement: text("arena_involvement"),
+  category: text("category").notNull().default("other"),
+  featured: boolean("featured").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  receiptHash: text("receipt_hash"),
+  stellarTx: text("stellar_tx"),
+  meta: jsonb("meta").$type<Json>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+});

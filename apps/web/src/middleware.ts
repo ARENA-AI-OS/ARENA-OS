@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession, SESSION_COOKIE } from "@/security/session-core";
 
+// Public pages that require no authentication.
+const PUBLIC_PATHS = ["/", "/exhibition"];
+
 // Protects pages: redirects unauthenticated users to /login.
 // API routes handle their own 401 responses.
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (pathname.startsWith("/api") || pathname === "/login") return NextResponse.next();
+  if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const session = await verifySession(token);
   if (!session) {

@@ -1,45 +1,53 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: [
-    "./src/**/*.{ts,tsx}",
-  ],
+  content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         arena: {
-          bg: "#05070B",
-          panel: "#0B1018",
-          panel2: "#0F1622",
-          border: "#1B2433",
-          text: "#E6ECF5",
-          muted: "#7A8AA3",
-          blue: "#3B82F6",
-          violet: "#8B5CF6",
-          cyan: "#22D3EE",
-          green: "#34D399",
-          amber: "#FBBF24",
-          red: "#F87171",
+          bg: "#0A0B0D",
+          panel: "#14171A",
+          panel2: "#101316",
+          inset: "#0C0F11",
+          border: "#26302B",
+          "border-hover": "#32E87540",
+          text: "#E8ECEA",
+          secondary: "#8C9691",
+          muted: "#5E6863",
+          green: "#32E875",
+          "green-dim": "#174D32",
+          "green-glow": "#32E87520",
+          red: "#C94A4A",
+          "red-dim": "#3D1A1A",
         },
       },
       fontFamily: {
-        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        sans: ["var(--font-ui)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(59,130,246,0.15), 0 8px 40px -12px rgba(59,130,246,0.25)",
+        glow: "0 0 12px -4px #32E87540, inset 0 0 0 1px #32E87530",
+        "glow-red": "0 0 12px -4px #C94A4A40, inset 0 0 0 1px #C94A4A30",
+        panel: "0 1px 3px rgba(0,0,0,0.3)",
       },
-      backgroundImage: {
-        "grid-faint":
-          "linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)",
+      borderRadius: {
+        panel: "8px",
+        btn: "6px",
+      },
+      animation: {
+        pulse: "arena-pulse 1.2s ease-in-out infinite",
+        "fade-in-up": "fade-in-up 0.3s ease-out",
       },
       keyframes: {
-        pulseGlow: {
+        "arena-pulse": {
           "0%, 100%": { opacity: "0.6" },
           "50%": { opacity: "1" },
         },
-      },
-      animation: {
-        pulseGlow: "pulseGlow 2s ease-in-out infinite",
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translateY(-4px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
     },
   },

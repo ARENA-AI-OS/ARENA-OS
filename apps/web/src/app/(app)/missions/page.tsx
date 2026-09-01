@@ -1,11 +1,15 @@
 import { getRepository } from "@db/index";
-import { Panel, PanelHeader, Badge, StatusDot, PageHeader, STATUS_TONE } from "@/components/ui";
+import { Badge, StatusDot, Panel, PanelHeader } from "@/components/ui";
 import Link from "next/link";
 import { MissionsFilter } from "@/components/missions-filter";
 
 export const dynamic = "force-dynamic";
 
-export default async function MissionsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+export default async function MissionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const params = await searchParams;
   const repo = getRepository();
   const ws = await repo.ensureSeedWorkspace();
@@ -18,36 +22,154 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
   const allMissions = await repo.listMissions(ws.id);
   const counts = {
     all: allMissions.length,
-    active: allMissions.filter((m) => !["completed", "verified", "failed"].includes(m.status)).length,
-    completed: allMissions.filter((m) => ["completed", "verified"].includes(m.status)).length,
+    active: allMissions.filter(
+      (m) => !["completed", "verified", "failed"].includes(m.status)
+    ).length,
+    completed: allMissions.filter((m) =>
+      ["completed", "verified"].includes(m.status)
+    ).length,
     failed: allMissions.filter((m) => m.status === "failed").length,
-    awaiting: allMissions.filter((m) => m.status === "awaiting_approval").length,
+    awaiting: allMissions.filter((m) => m.status === "awaiting_approval")
+      .length,
   };
 
   return (
-    <div className="bg-arena-grid min-h-screen">
-      <PageHeader title="Missions" subtitle="Every meaningful request becomes a verifiable mission." />
-      <div className="px-4 md:px-6 py-4 md:py-6 space-y-4">
-        <MissionsFilter activeFilter={params.status} counts={counts} />
+    <div className="min-h-screen">
+      <div className="px-6 py-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="arena-label">MISSIONS</span>
+            <p className="text-[11px] text-arena-secondary mt-0.5">
+              {missions.length} total · {counts.active} active
+            </p>
+          </div>
+          <MissionsFilter activeFilter={params.status} counts={counts} />
+        </div>
+
+        {/* Mission Table */}
         <Panel>
-          <PanelHeader title="Mission Log" subtitle={`${missions.length} total`} />
-          <div className="divide-y divide-arena-border">
-            {missions.map((m) => (
-              <Link key={m.id} href={`/missions/${m.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-white/5">
-                <StatusDot tone={STATUS_TONE[m.status] ?? "muted"} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-arena-text truncate">{m.title}</div>
-                  <div className="text-xs text-arena-muted font-mono">{m.id} · {new Date(m.createdAt).toLocaleString()}</div>
-                </div>
-                <div className="hidden md:flex gap-1">
-                  {m.agents.map((a) => (
-                    <Badge key={a} tone="violet">{a}</Badge>
-                  ))}
-                </div>
-                <Badge tone={STATUS_TONE[m.status] ?? "default"}>{m.status}</Badge>
-              </Link>
-            ))}
-            {missions.length === 0 && <div className="px-5 py-8 text-sm text-arena-muted">No missions match this filter.</div>}
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b border-arena-border">
+                  <th className="px-4 py-2 text-left font-mono text-[9px] font-medium tracking-[0.08em] uppercase text-arena-muted">
+                    MISSION
+                  </th>
+                  <th className="px-4 py-2 text-left font-mono text-[9px] font-medium tracking-[0.08em] uppercase text-arena-muted">
+                    STATUS
+                  </th>
+                  <th className="px-4 py-2 text-left font-mono text-[9px] font-medium tracking-[0.08em] uppercase text-arena-muted">
+                    AGENTS
+                  </th>
+                  <th className="px-4 py-2 text-left font-mono text-[9px] font-medium tracking-[0.08em] uppercase text-arena-muted">
+                    PHASE
+                  </th>
+                  <th className="px-4 py-2 text-right font-mono text-[9px] font-medium tracking-[0.08em] uppercase text-arena-muted">
+                    COST
+                  </th>
+                  <th className="px-4 py-2 text-right font-mono text-[9px] font-medium tracking-[0.08em] uppercase text-arena-muted">
+                    CREATED
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-arena-border/30">
+                {missions.map((m) => (
+                  <tr
+                    key={m.id}
+                    className="relative hover:bg-white/[0.02] transition-colors"
+                  >
+                    <td className="px-4 py-2.5">
+                      <Link
+                        href={`/missions/${m.id}`}
+                        className="absolute inset-0 z-10"
+                        aria-label={`View mission ${m.id}: ${m.title}`}
+                      />
+                      <div className="flex items-center gap-2 relative">
+                        <StatusDot
+                          tone={
+                            m.status === "failed"
+                              ? "red"
+                              : ["completed", "verified"].includes(m.status)
+                                ? "green"
+                                : "green"
+                          }
+                          pulse={
+                            !["completed", "verified", "failed"].includes(
+                              m.status
+                            )
+                          }
+                        />
+                        <div>
+                          <div className="text-arena-text truncate max-w-[300px]">
+                            {m.title}
+                          </div>
+                          <div className="font-mono text-[9px] text-arena-muted">
+                            {m.id}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Badge
+                        tone={
+                          m.status === "failed"
+                            ? "red"
+                            : ["completed", "verified"].includes(m.status)
+                              ? "green"
+                              : "green"
+                        }
+                      >
+                        {m.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex gap-1">
+                        {m.agents.slice(0, 3).map((a) => (
+                          <span
+                            key={a}
+                            className="font-mono text-[9px] text-arena-secondary"
+                          >
+                            {a}
+                          </span>
+                        ))}
+                        {m.agents.length > 3 && (
+                          <span className="font-mono text-[9px] text-arena-muted">
+                            +{m.agents.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="font-mono text-[10px] text-arena-secondary capitalize">
+                        {m.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className="font-mono text-[10px] text-arena-text">
+                        {m.costUsd > 0 ? `$${m.costUsd.toFixed(2)}` : "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className="font-mono text-[9px] text-arena-muted">
+                        {new Date(m.createdAt).toLocaleDateString()}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {missions.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-8 text-center text-arena-muted"
+                    >
+                      <div className="font-mono text-[10px] uppercase tracking-wider">
+                        No missions found
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </Panel>
       </div>

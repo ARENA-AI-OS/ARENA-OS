@@ -4,13 +4,17 @@ import type {
   AgentSlot,
   ApiKey,
   AuditEvent,
+  ChatConversation,
+  ChatMessage,
   CustomApi,
   CustomApiEndpoint,
+  ExhibitionProject,
   Integration,
   Memory,
   Mission,
   ModelProviderConfig,
   Payment,
+  PlatformConnection,
   Project,
   Receipt,
   StellarTransaction,
@@ -50,6 +54,10 @@ class MemoryRepository implements Repository {
   private customApiEndpoints: CustomApiEndpoint[] = [];
   private agentSlots: AgentSlot[] = [];
   private agentApiAssignments: AgentApiAssignment[] = [];
+  private chatConversations: ChatConversation[] = [];
+  private chatMessages: ChatMessage[] = [];
+  private platformConnections: PlatformConnection[] = [];
+  private exhibitionProjects: ExhibitionProject[] = [];
 
   constructor(seedEmail: string) {
     this.workspace = {
@@ -417,6 +425,66 @@ class MemoryRepository implements Repository {
       items.push({ id: s.id, at: s.createdAt, kind: "stellar", actor: "stellar", action: `stellar:${s.status}`, missionId: s.missionId, detail: s });
     }
     return items.sort((a, b) => b.at.localeCompare(a.at));
+  }
+
+  // ── Chat Conversations ──────────────────────────────────────────────────
+  async listChatConversations(workspaceId: string): Promise<ChatConversation[]> {
+    return this.chatConversations.filter((c) => c.workspaceId === workspaceId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+  async getChatConversation(id: string): Promise<ChatConversation | undefined> {
+    return this.chatConversations.find((c) => c.id === id);
+  }
+  async saveChatConversation(c: ChatConversation): Promise<ChatConversation> {
+    const idx = this.chatConversations.findIndex((x) => x.id === c.id);
+    if (idx >= 0) this.chatConversations[idx] = c; else this.chatConversations.push(c);
+    return c;
+  }
+  async deleteChatConversation(id: string): Promise<void> {
+    this.chatConversations = this.chatConversations.filter((c) => c.id !== id);
+    this.chatMessages = this.chatMessages.filter((m) => m.conversationId !== id);
+  }
+
+  // ── Chat Messages ───────────────────────────────────────────────────────
+  async listChatMessages(conversationId: string): Promise<ChatMessage[]> {
+    return this.chatMessages.filter((m) => m.conversationId === conversationId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+  async saveChatMessage(m: ChatMessage): Promise<ChatMessage> {
+    this.chatMessages.push(m);
+    return m;
+  }
+
+  // ── Platform Connections ─────────────────────────────────────────────────
+  async listPlatformConnections(workspaceId: string): Promise<PlatformConnection[]> {
+    return this.platformConnections.filter((p) => p.workspaceId === workspaceId);
+  }
+  async getPlatformConnection(id: string): Promise<PlatformConnection | undefined> {
+    return this.platformConnections.find((p) => p.id === id);
+  }
+  async savePlatformConnection(p: PlatformConnection): Promise<PlatformConnection> {
+    const idx = this.platformConnections.findIndex((x) => x.id === p.id);
+    if (idx >= 0) this.platformConnections[idx] = p; else this.platformConnections.push(p);
+    return p;
+  }
+  async deletePlatformConnection(id: string): Promise<void> {
+    this.platformConnections = this.platformConnections.filter((p) => p.id !== id);
+  }
+
+  // ── Exhibition Projects ──────────────────────────────────────────────────
+  async listExhibitionProjects(workspaceId: string, featuredOnly?: boolean): Promise<ExhibitionProject[]> {
+    let items = this.exhibitionProjects.filter((p) => p.workspaceId === workspaceId);
+    if (featuredOnly) items = items.filter((p) => p.featured);
+    return items.sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+  async getExhibitionProject(id: string): Promise<ExhibitionProject | undefined> {
+    return this.exhibitionProjects.find((p) => p.id === id);
+  }
+  async saveExhibitionProject(p: ExhibitionProject): Promise<ExhibitionProject> {
+    const idx = this.exhibitionProjects.findIndex((x) => x.id === p.id);
+    if (idx >= 0) this.exhibitionProjects[idx] = p; else this.exhibitionProjects.push(p);
+    return p;
+  }
+  async deleteExhibitionProject(id: string): Promise<void> {
+    this.exhibitionProjects = this.exhibitionProjects.filter((p) => p.id !== id);
   }
 }
 

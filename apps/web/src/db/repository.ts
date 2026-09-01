@@ -4,13 +4,17 @@ import type {
   AgentSlot,
   ApiKey,
   AuditEvent,
+  ChatConversation,
+  ChatMessage,
   CustomApi,
   CustomApiEndpoint,
+  ExhibitionProject,
   Integration,
   Memory,
   Mission,
   ModelProviderConfig,
   Payment,
+  PlatformConnection,
   Project,
   Receipt,
   StellarTransaction,
@@ -98,6 +102,28 @@ export interface Repository {
   getAgentApiAssignment(id: string): Promise<AgentApiAssignment | undefined>;
   saveAgentApiAssignment(a: AgentApiAssignment): Promise<AgentApiAssignment>;
   deleteAgentApiAssignment(id: string): Promise<void>;
+
+  // Chat Conversations
+  listChatConversations(workspaceId: string): Promise<ChatConversation[]>;
+  getChatConversation(id: string): Promise<ChatConversation | undefined>;
+  saveChatConversation(c: ChatConversation): Promise<ChatConversation>;
+  deleteChatConversation(id: string): Promise<void>;
+
+  // Chat Messages
+  listChatMessages(conversationId: string): Promise<ChatMessage[]>;
+  saveChatMessage(m: ChatMessage): Promise<ChatMessage>;
+
+  // Platform Connections
+  listPlatformConnections(workspaceId: string): Promise<PlatformConnection[]>;
+  getPlatformConnection(id: string): Promise<PlatformConnection | undefined>;
+  savePlatformConnection(p: PlatformConnection): Promise<PlatformConnection>;
+  deletePlatformConnection(id: string): Promise<void>;
+
+  // Exhibition Projects
+  listExhibitionProjects(workspaceId: string, featuredOnly?: boolean): Promise<ExhibitionProject[]>;
+  getExhibitionProject(id: string): Promise<ExhibitionProject | undefined>;
+  saveExhibitionProject(p: ExhibitionProject): Promise<ExhibitionProject>;
+  deleteExhibitionProject(id: string): Promise<void>;
 
   listActivity(filter?: ActivityFilter): Promise<ActivityItem[]>;
 }

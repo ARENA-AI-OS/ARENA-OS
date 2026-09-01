@@ -24,6 +24,8 @@ export function authorize(
 // Production operations require elevated approval beyond base capabilities.
 const ELEVATED: Capability[] = [
   "railway:deploy_production",
+  "vercel:deploy_production",
+  "render:deploy_production",
   "github:merge_pull_request",
   "stellar:spend",
   "supabase:schema_change",

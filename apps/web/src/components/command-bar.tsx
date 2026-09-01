@@ -8,18 +8,20 @@ interface Props {
   providers: { provider: string; label: string; connected: boolean }[];
 }
 
-export function CommandBar({ projects, providers }: Props) {
+const SHORTCUTS = ["BUILD", "DEPLOY", "RESEARCH", "AUDIT", "REFACTOR", "TEST"];
+
+export function CommandBar({ projects }: Props) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
 
   async function run() {
     if (!text.trim() || running) return;
     setRunning(true);
     setError(null);
-    // Light intent parsing: if the user mentions spending XLM, enable paid API.
     const spendMatch = text.match(/(\d+(?:\.\d+)?)\s*XLM/i);
     const allowPaidApi = !!spendMatch;
     const budgetXlm = spendMatch ? Number(spendMatch[1]) : 5;
@@ -47,66 +49,83 @@ export function CommandBar({ projects, providers }: Props) {
   }
 
   return (
-    <div className="glass rounded-xl glow-border p-4">
-      <label className="text-[11px] uppercase tracking-wider text-arena-muted">What do you want Arena to accomplish?</label>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) run(); }}
-        placeholder="Fix issue #42 and deploy a preview…\nSpend up to 1 XLM on an external analysis API…\n\nTip: Cmd/Ctrl+Enter to run"
-        className="mt-2 w-full resize-none rounded-lg bg-arena-bg/60 border border-arena-border px-3 py-3 text-sm text-arena-text placeholder:text-arena-muted/60 focus:outline-none focus:border-arena-blue/60 font-mono"
-        rows={3}
-      />
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {/* Project selector - functional */}
-        <select
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          className="rounded-md bg-arena-bg/60 border border-arena-border px-2 py-1.5 text-xs text-arena-text"
-        >
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        {/* Coming soon: Model routing selector */}
-        <button
-          disabled
-          title="Coming in Prompt 4: AI model routing"
-          className="rounded-md bg-arena-bg/30 border border-arena-border/50 px-2 py-1.5 text-xs text-arena-muted/50 cursor-not-allowed"
-        >
-          Model: Auto ✦
-        </button>
-        {/* Coming soon: Agent selection */}
-        <button
-          disabled
-          title="Coming in Prompt 4: Agent selection"
-          className="rounded-md bg-arena-bg/30 border border-arena-border/50 px-2 py-1.5 text-xs text-arena-muted/50 cursor-not-allowed"
-        >
-          Agent: Auto ✦
-        </button>
-        {/* Coming soon: Slash commands */}
-        <button
-          disabled
-          title="Coming in Prompt 4: Slash commands"
-          className="rounded-md bg-arena-bg/30 border border-arena-border/50 px-2 py-1.5 text-xs text-arena-muted/50 cursor-not-allowed"
-        >
-          /commands ✦
-        </button>
-        <div className="flex-1" />
-        <button
-          onClick={run}
-          disabled={running || !text.trim()}
-          className="rounded-md bg-arena-blue px-4 py-2 text-sm font-medium text-white hover:bg-arena-blue/90 disabled:opacity-40 transition-opacity"
-        >
-          {running ? (
-            <span className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Running…
-            </span>
-          ) : "RUN MISSION"}
-        </button>
+    <div className="bg-arena-panel border border-arena-border rounded-lg">
+      {/* Header */}
+      <div className="px-4 py-2.5 border-b border-arena-border flex items-center justify-between">
+        <span className="arena-label">MISSION INPUT</span>
+        <div className="flex items-center gap-2 font-mono text-[9px] text-arena-muted">
+          <span>⌘ ENTER TO RUN</span>
+        </div>
       </div>
-      {error && <div className="mt-2 text-xs text-arena-red">{error}</div>}
+
+      {/* Input area */}
+      <div className="p-4">
+        <div
+          className={`arena-inset rounded-md transition-colors ${focused ? "arena-glow-green" : ""}`}
+        >
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) run();
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="What do you want Arena to accomplish?"
+            className="w-full resize-none bg-transparent px-4 py-3 text-sm text-arena-text placeholder:text-arena-muted/40 focus:outline-none font-mono"
+            rows={2}
+          />
+        </div>
+
+        {/* Shortcuts */}
+        <div className="flex items-center gap-1.5 mt-3">
+          {SHORTCUTS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setText((t) => (t ? `${t} /${s.toLowerCase()} ` : `/${s.toLowerCase()} `))}
+              className="px-2 py-1 rounded bg-arena-inset border border-arena-border font-mono text-[9px] text-arena-muted hover:text-arena-green hover:border-arena-green/30 transition-colors"
+            >
+              {s}
+            </button>
+          ))}
+          <div className="flex-1" />
+          <select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            className="bg-arena-inset border border-arena-border rounded px-2 py-1 font-mono text-[10px] text-arena-secondary focus:outline-none"
+          >
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Submit */}
+        <div className="flex items-center justify-between mt-3">
+          {error && (
+            <span className="font-mono text-[10px] text-arena-red">
+              {error}
+            </span>
+          )}
+          <div className="flex-1" />
+          <button
+            onClick={run}
+            disabled={running || !text.trim()}
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-arena-green/15 text-arena-green border border-arena-green/30 font-mono text-[11px] font-medium hover:bg-arena-green/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            {running ? (
+              <>
+                <span className="inline-block h-3 w-3 border-2 border-arena-green/30 border-t-arena-green rounded-full animate-spin" />
+                EXECUTING
+              </>
+            ) : (
+              "▶ RUN MISSION"
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

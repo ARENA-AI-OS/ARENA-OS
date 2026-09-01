@@ -127,7 +127,8 @@ export type AgentRole =
   | "code"
   | "qa"
   | "deployment"
-  | "stellar";
+  | "stellar"
+  | "planner";
 
 export interface AgentSpec {
   role: AgentRole;
@@ -186,6 +187,13 @@ export const AGENT_REGISTRY: Record<AgentRole, AgentSpec> = {
     description: "Inspects wallets, prepares and submits Soroban transactions.",
     defaultCapabilities: ["stellar:read_wallet", "stellar:prepare_transaction", "stellar:submit_transaction", "stellar:spend"],
     defaultModelRole: "any",
+  },
+  planner: {
+    role: "planner",
+    name: "Planning Assistant",
+    description: "Conversational planner — reasons about approach and strategy. Zero tool capabilities; outputs plans that hand off to Arena missions.",
+    defaultCapabilities: [],
+    defaultModelRole: "research",
   },
 };
 
@@ -270,6 +278,18 @@ export type ToolName =
   | "railway.deploy_preview"
   | "railway.get_deployment_status"
   | "railway.get_logs"
+  // Render
+  | "render.list_projects"
+  | "render.get_deployment_status"
+  | "render.get_logs"
+  | "render.deploy_preview"
+  // Vercel
+  | "vercel.list_projects"
+  | "vercel.get_deployment_status"
+  | "vercel.get_logs"
+  | "vercel.deploy_preview"
+  | "vercel.deploy_production"
+  | "vercel.get_domains"
   // Payment / Stellar
   | "payment.request"
   | "stellar.anchor_receipt"
@@ -281,7 +301,7 @@ export interface ToolSpec {
   capability: Capability;
   description: string;
   // Provider that must be configured for this tool to run for real.
-  requiresProvider?: "github" | "supabase" | "railway" | "firebase" | "stellar" | "x402";
+  requiresProvider?: "github" | "supabase" | "railway" | "firebase" | "render" | "vercel" | "stellar" | "x402";
 }
 
 export interface ToolRun {
@@ -300,7 +320,7 @@ export interface ToolRun {
 // Integrations
 // ---------------------------------------------------------------------------
 
-export type IntegrationType = "github" | "supabase" | "firebase" | "railway" | "stellar";
+export type IntegrationType = "github" | "supabase" | "firebase" | "railway" | "stellar" | "render" | "vercel";
 
 export interface Integration {
   id: string;
@@ -512,3 +532,79 @@ export const newAudit = (e: Omit<AuditEvent, "id" | "at">): AuditEvent => ({
   at: nowIso(),
   ...e,
 });
+
+// ---------------------------------------------------------------------------
+// Chat Conversations (Prompt 8A — planning chatbot)
+// ---------------------------------------------------------------------------
+
+export type ChatRole = "user" | "assistant" | "system";
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  role: ChatRole;
+  content: string;
+  model?: string;
+  createdAt: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  workspaceId: string;
+  projectId?: string;
+  title: string;
+  modelProvider: string;
+  status: "active" | "archived";
+  createdAt: string;
+  updatedAt: string;
+  missionId?: string; // set when handed off to Arena
+}
+
+// ---------------------------------------------------------------------------
+// Platform Connections (Prompt 8A — Arena page)
+// ---------------------------------------------------------------------------
+
+export type PlatformStatus = "connected" | "disconnected" | "error" | "token_expired";
+
+export interface PlatformScope {
+  name: string;
+  description: string;
+}
+
+export interface ExhibitionProject {
+  id: string;
+  workspaceId: string;
+  missionId?: string;
+  name: string;
+  description: string;
+  techStack: string[];
+  repoUrl?: string;
+  liveUrl?: string;
+  screenshotUrl?: string;
+  arenaInvolvement?: string;
+  category: string;
+  featured: boolean;
+  sortOrder: number;
+  receiptHash?: string;
+  stellarTx?: string;
+  meta?: Json;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlatformConnection {
+  id: string;
+  workspaceId: string;
+  platform: IntegrationType | "openai" | "gemini" | "claude";
+  label: string;
+  status: PlatformStatus;
+  credentialReference: string;
+  scopes: PlatformScope[];
+  lastUsedAt?: string;
+  lastTestAt?: string;
+  lastTestOk?: boolean;
+  network?: "testnet" | "mainnet"; // for Stellar
+  meta: Json;
+  createdAt: string;
+}
+

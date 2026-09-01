@@ -12,11 +12,11 @@ interface Item {
   missionId?: string;
 }
 
-const ACTOR_TONE: Record<string, "blue" | "green" | "amber" | "red" | "violet" | "cyan" | "muted"> = {
-  commander: "violet",
+const ACTOR_TONE: Record<string, "blue" | "green" | "amber" | "red" | "muted"> = {
+  commander: "green",
   research: "blue",
-  code: "blue",
-  qa: "cyan",
+  code: "green",
+  qa: "amber",
   deployment: "amber",
   stellar: "green",
   user: "muted",
