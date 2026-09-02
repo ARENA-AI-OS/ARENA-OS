@@ -48,7 +48,7 @@ export function IntroScreen() {
         className={`w-full h-full object-cover transition-transform duration-[1200ms] ease-out ${
           fading ? "scale-100" : "scale-[1.05]"
         }`}
-        src="/intro.mp4"
+        src="/api/media/intro.mp4"
         onEnded={handleVideoEnd}
       />
 

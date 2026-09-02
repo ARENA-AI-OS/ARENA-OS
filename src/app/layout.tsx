@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           muted
           playsInline
           className="fixed inset-0 w-full h-full object-cover z-[-1] opacity-[0.15] pointer-events-none"
-          src="/background.mp4"
+          src="/api/media/background.mp4"
         />
         <div className="fixed inset-0 z-[-1] pointer-events-none bg-gradient-to-b from-arena-bg/70 via-arena-bg/50 to-arena-bg/80" />
         <IntroScreen />
