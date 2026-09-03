@@ -1,0 +1,31 @@
+{
+  "name": "@arena-os/oracle-embed",
+  "version": "0.1.0",
+  "description": "Drop-in AI financial-decision widget for BMONI-powered wallets. Mount it inside your own app; it talks to an Oracle backend (self-hosted apps/oracle-web, or a hosted instance) over a plain REST contract.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.tsx --format esm,cjs --dts --sourcemap --external react,react-dom",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "ethers": "^6.13.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.5.0"
+  }
+}
