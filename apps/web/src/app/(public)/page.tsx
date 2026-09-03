@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { BackgroundVideo } from "@/components/background-video";
+import { IntroSplash } from "@/components/intro-splash";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-arena-bg">
+      <IntroSplash />
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-arena-grid opacity-30" />
+        <BackgroundVideo />
         <div className="relative max-w-5xl mx-auto px-6 pt-24 pb-20 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-arena-blue/10 border border-arena-blue/20 text-arena-blue text-xs font-mono mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-arena-blue animate-pulse" />
