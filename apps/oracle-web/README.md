@@ -35,6 +35,20 @@ not just curled against BMONI directly:
   (`POST /v1/webhooks/config` needs a publicly reachable HTTPS
   `callbackUrl`, which a local dev server isn't) — that registration is a
   deploy-time step, not something this code can do for you.
+- Wallet management (`/wallet`): real deposit-account details, Nigerian
+  bank withdrawal (verify → register → offramp → approve → sign), real
+  transaction history. See "Live findings" for two more doc-vs-live
+  discrepancies found here.
+- Auto-save (`/autosave`): a real, live-verified gap-fill feature — BMONI's
+  own platform has no standing/recurring savings mechanism. On a deposit
+  event, this creates AND approves a real TRANSFER proposal automatically
+  (live-verified: a simulated ₦50,000 deposit against a 10% rule produced
+  a real ₦5,000 proposal, `PENDING_SIGNATURES`, `currentApprovals: 1`) —
+  the user only has to tap Confirm and enter their PIN, not build the
+  transaction. See `src/lib/autosave.ts` for why it deliberately stops at
+  the signature rather than fully automating it (would need a
+  shared-across-users server co-signer key — a materially worse custody
+  model, see below).
 
 **STUBBED / SIMULATED** (clearly labeled in the UI, never silently upgraded):
 
@@ -96,6 +110,26 @@ API disagree in a few places that would otherwise fail silently:
   (`balance`, not `amount`; no `{ data }` envelope) — several of BMONI's
   own doc examples show a `{ data: {...} }` wrapper that the live responses
   don't have.
+- **`GET .../bank-accounts/deposit-accounts/NGN` returns `{ accounts: [...] }`**,
+  a list, not a single account object — and each entry's fields are
+  `bankName`/`bankCode`, not `name`/`code` as the OpenAPI schema's own
+  naming (`NigerianBankOutput`) suggested before checking its actual
+  properties.
+- **`POST .../onramp/vba/nigeria` requires a real UUID `bankAccountId`** for
+  a *personal* virtual bank account. A freshly onboarded Nigeria user in
+  the sandbox is issued a *pooled/shared* deposit account instead
+  (id `"pooled-vba-1"`, resolved by a `depositMessage` reference rather
+  than a personal NUBAN) — passing that pooled id to `onramp/vba/nigeria`
+  is rejected (`"bankAccountId must be a UUID"`). So the "link a VBA to
+  this wallet" flow BMONI's docs describe isn't reachable from standard
+  onboarding in the sandbox; the deposit UI shows the pooled account and
+  its reference directly instead.
+- **`ADD_MEMBER` proposals take a `targetUserId`**, not a raw wallet
+  address — confirmed from the live OpenAPI's `SmartWalletProposalData`
+  schema. A "server-held co-signer for automation" design built on this
+  would mean a *shared* operator identity added to potentially every
+  user's wallet, not a scoped per-wallet key — see `src/lib/autosave.ts`
+  for why that shaped the auto-save design away from full automation.
 
 ## Custody — read this before this touches real funds
 

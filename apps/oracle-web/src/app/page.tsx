@@ -8,7 +8,7 @@ export default function HomePage() {
         An AI-powered financial decision simulator on BMONI&apos;s embedded Ethereum wallet
         infrastructure. Connect → Understand → Simulate → Stress Test → Decide → Act.
       </p>
-      <div className="mt-8 flex gap-4">
+      <div className="mt-8 flex flex-wrap gap-4">
         <Link href="/onboard" className="rounded bg-present px-5 py-2.5 font-mono text-sm text-base">
           Onboard a wallet
         </Link>
@@ -17,6 +17,18 @@ export default function HomePage() {
           className="rounded border border-white/30 px-5 py-2.5 font-mono text-sm text-white"
         >
           Open simulator
+        </Link>
+        <Link
+          href="/wallet"
+          className="rounded border border-white/30 px-5 py-2.5 font-mono text-sm text-white"
+        >
+          Wallet
+        </Link>
+        <Link
+          href="/autosave"
+          className="rounded border border-white/30 px-5 py-2.5 font-mono text-sm text-white"
+        >
+          Auto-save
         </Link>
       </div>
       <p className="mt-10 font-mono text-xs text-white/30">
