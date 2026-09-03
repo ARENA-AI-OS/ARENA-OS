@@ -75,6 +75,7 @@ export default function SimulatorPage() {
   const [destAddress, setDestAddress] = useState("");
   const [pin, setPin] = useState("");
   const [proposal, setProposal] = useState<{ id: string; status: string } | null>(null);
+  const [signed, setSigned] = useState(false);
   const [txBusy, setTxBusy] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txLog, setTxLog] = useState<string[]>([]);
@@ -225,12 +226,39 @@ export default function SimulatorPage() {
       const signData = await signRes.json();
       if (!signRes.ok) throw new Error(JSON.stringify(signData.error ?? signData));
       setProposal({ id: proposal.id, status: signData.proposal.status });
+      setSigned(true);
       pushTxLog(`Submitted. status=${signData.proposal.status}`);
+
+      // Signature acceptance is not completion: live testing showed status
+      // can stay PENDING_* even after both approval and signature are
+      // recorded, settling asynchronously. Poll instead of assuming
+      // COMPLETED from the /sign response.
+      await pollProposalStatus(proposal.id);
     } catch (e) {
       setTxError(String((e as Error).message));
     } finally {
       setTxBusy(false);
     }
+  }
+
+  async function pollProposalStatus(id: string) {
+    for (let i = 0; i < 10; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        const res = await fetch(`/api/proposals/${id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data.error ?? data));
+        pushTxLog(`Polled status: ${data.proposal.status}`);
+        setProposal({ id, status: data.proposal.status });
+        if (data.proposal.status === "COMPLETED" || data.proposal.status === "FAILED" || data.proposal.status === "REJECTED") {
+          return;
+        }
+      } catch (e) {
+        pushTxLog(`Poll error: ${String((e as Error).message)}`);
+        return;
+      }
+    }
+    pushTxLog("Still pending after 10 polls — check back later or inspect the proposal directly.");
   }
 
   return (
@@ -411,7 +439,7 @@ export default function SimulatorPage() {
             </div>
           )}
 
-          {proposal && proposal.status !== "COMPLETED" && (
+          {proposal && !signed && (
             <div className="space-y-3">
               <p className="font-mono text-sm">
                 Proposal <span className="text-present">{proposal.id}</span> — status{" "}
@@ -430,6 +458,21 @@ export default function SimulatorPage() {
                 className="rounded bg-healthy-future px-4 py-2 font-mono text-sm text-base disabled:opacity-40"
               >
                 {txBusy ? "Working…" : "Approve & sign"}
+              </button>
+            </div>
+          )}
+
+          {proposal && signed && proposal.status !== "COMPLETED" && (
+            <div className="space-y-2">
+              <p className="font-mono text-sm text-present">
+                Signature submitted — status <span>{proposal.status}</span>, settling asynchronously.
+              </p>
+              <button
+                disabled={txBusy}
+                onClick={() => pollProposalStatus(proposal.id)}
+                className="rounded border border-white/30 px-3 py-1.5 font-mono text-xs text-white disabled:opacity-40"
+              >
+                Check status again
               </button>
             </div>
           )}

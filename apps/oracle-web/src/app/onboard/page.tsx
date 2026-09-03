@@ -110,9 +110,10 @@ export default function OnboardPage() {
     setBusy(true);
     setError(null);
     try {
+      if (pin.length < 4) throw new Error("Enter the PIN you chose for this wallet (min 4 digits).");
+
       let address = getStoredWalletAddress();
       if (!address) {
-        if (pin.length < 4) throw new Error("Choose a PIN with at least 4 digits.");
         address = await createAndStoreWallet(pin);
         pushLog(`Owner key generated in-browser: ${address}`);
       }
@@ -229,15 +230,24 @@ export default function OnboardPage() {
 
   async function poll() {
     for (let i = 0; i < 15; i++) {
-      const res = await fetch("/api/onboard/status");
-      const data = await res.json();
-      pushLog(`onboarding/status -> anchorStatus: ${data.anchorStatus}`);
-      if (data.anchorStatus === "active") {
-        setStep("active");
+      try {
+        const res = await fetch("/api/onboard/status");
+        const data = await res.json();
+        if (!res.ok) throw new Error(JSON.stringify(data.error ?? data));
+        pushLog(`onboarding/status -> anchorStatus: ${data.anchorStatus}`);
+        if (data.anchorStatus === "active") {
+          setStep("active");
+          return;
+        }
+      } catch (e) {
+        setError(`Polling failed: ${String((e as Error).message)}. Retry from the button below.`);
+        setStep("activate-rail");
         return;
       }
       await new Promise((r) => setTimeout(r, 1500));
     }
+    setError("Still not active after 15 polls. BMONI's rail may be taking longer than usual — retry below.");
+    setStep("activate-rail");
   }
 
   return (
