@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { hasProcessedWebhookEvent, markWebhookEventProcessed } from "@/lib/db";
+import { handleDepositEvent } from "@/lib/autosave";
 
 /**
  * POST /api/webhooks/bmoni — Block D. Replaces polling for
@@ -54,6 +55,15 @@ export async function POST(req: NextRequest) {
       // real-time channel exists. Today the UI still polls
       // /api/onboard/status as a fallback — see README.
       console.log(`[bmoni webhook] ${event.eventType}`, event.payload);
+      break;
+    case "employee.deposit.completed":
+      // Not awaited: this makes real BMONI API calls (create + approve a
+      // proposal — see lib/autosave.ts), which can run longer than we want
+      // to hold up the ack. Acknowledge first, per BMONI's own guidance on
+      // their 10s delivery timeout.
+      void handleDepositEvent(event.payload as Parameters<typeof handleDepositEvent>[0]).catch((err) => {
+        console.error(`[bmoni webhook] autosave handling failed for event ${event.id}:`, err);
+      });
       break;
     default:
       console.log(`[bmoni webhook] unhandled event type: ${event.eventType}`);

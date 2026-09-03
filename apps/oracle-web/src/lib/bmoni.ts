@@ -337,12 +337,96 @@ export function getOnboardingStatus(userId: string) {
 // Stage 5 — fund the wallet
 // ---------------------------------------------------------------------------
 
-export function registerNgnDepositAccount(userId: string, smartWalletId: string) {
-  return request("POST", `/v1/users/${userId}/smart-wallets/${smartWalletId}/onramp/vba/nigeria`);
+export interface NgnDepositAccount {
+  id: string;
+  accountName: string;
+  bankName: string;
+  currency: string;
+  accountNumber: string;
+  bankCode: string;
+  /** Include this exact reference on the transfer — this is a pooled/shared account, resolved by reference, not by NUBAN alone. */
+  depositMessage?: string;
+  targetCurrency?: string;
 }
 
-export function getNgnDepositAccount(userId: string) {
-  return request("GET", `/v1/users/${userId}/bank-accounts/deposit-accounts/NGN`);
+/** Live-verified: for a freshly onboarded NGN user, this is a pooled account resolved by `depositMessage`, not a personal NUBAN — no separate "link" step is needed or (without a personal UUID-identified VBA) possible. */
+export function getNgnDepositAccounts(userId: string) {
+  return request<{ accounts: NgnDepositAccount[] }>("GET", `/v1/users/${userId}/bank-accounts/deposit-accounts/NGN`);
+}
+
+/**
+ * Links a personal (UUID-identified) NGN virtual bank account to a specific
+ * smart wallet. Live-verified this REQUIRES a real UUID `bankAccountId` —
+ * the pooled account's own id ("pooled-vba-1") is rejected. Not reachable
+ * from the standard Nigeria onboarding flow in the sandbox (which issues a
+ * pooled account, not a personal UUID one) — kept here for when a personal
+ * VBA is available, not wired into the deposit UI for that reason.
+ */
+export function linkNgnDepositAccount(userId: string, smartWalletId: string, bankAccountId: string) {
+  return request<{ bankAccountId: string; groupWalletId: string; linked: boolean }>(
+    "POST",
+    `/v1/users/${userId}/smart-wallets/${smartWalletId}/onramp/vba/nigeria`,
+    { bankAccountId },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Withdrawals — NGN wallet -> Nigerian bank account
+// ---------------------------------------------------------------------------
+
+/** Live field names are `bankName`/`bankCode` — the OpenAPI schema name suggested `name`/`code`, verified wrong live. */
+export interface NigerianBank {
+  bankName: string;
+  bankCode: string;
+}
+
+export function listNigerianBanks(userId: string) {
+  return request<{ banks: NigerianBank[] }>("GET", `/v1/users/${userId}/bank-accounts/nigerian-banks`);
+}
+
+export interface VerifiedNigerianAccount {
+  accountNumber: string;
+  accountName: string;
+  bankName: string;
+  bankCode: string;
+}
+
+export function verifyNigerianAccount(userId: string, accountNumber: string, bankCode: string) {
+  return request<VerifiedNigerianAccount>(
+    "POST",
+    `/v1/users/${userId}/bank-accounts/verify-nigerian-account`,
+    { accountNumber, bankCode },
+  );
+}
+
+export interface NigerianWithdrawalAccount {
+  id: string;
+  accountName: string;
+  bankName: string;
+  currency: string;
+  accountNumber: string;
+  bankCode: string;
+}
+
+/** Get-or-create: calling this again with the same account returns the existing record. */
+export function registerNigerianWithdrawalAccount(
+  userId: string,
+  params: { accountNumber: string; bankCode: string; bankName: string; accountHolderName: string },
+) {
+  return request<NigerianWithdrawalAccount>(
+    "POST",
+    `/v1/users/${userId}/bank-accounts/withdrawal-accounts/nigeria`,
+    params,
+  );
+}
+
+/** Source currency can be CNGN (direct) or USDB (auto-swapped). Returns a proposal — nothing moves until it's approved and signed. */
+export function createNigeriaOfframp(userId: string, smartWalletId: string, bankAccountId: string, fromAmount: string) {
+  return request<{ data: { proposalId: string; status: string; quote: unknown } }>(
+    "POST",
+    `/v1/users/${userId}/smart-wallets/${smartWalletId}/offramp/nigeria`,
+    { bankAccountId, fromAmount },
+  );
 }
 
 // ---------------------------------------------------------------------------
