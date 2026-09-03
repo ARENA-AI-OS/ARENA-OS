@@ -1,0 +1,16 @@
+{
+  "name": "@arena-os/oracle-fee-router",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Atomic on-chain fee-split contract for Oracle — designed and unit-tested, not yet integrated with BMONI's proposal API or deployed to any network. See README.",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "clean": "hardhat clean && rm -rf cache artifacts typechain-types"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.1.0",
+    "hardhat": "^2.22.16"
+  }
+}
