@@ -6,11 +6,13 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
     "clean": "hardhat clean && rm -rf cache artifacts typechain-types"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^5.1.0",
+    "dotenv": "^16.4.5",
     "hardhat": "^2.22.16"
   }
 }
