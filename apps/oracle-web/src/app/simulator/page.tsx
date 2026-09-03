@@ -74,8 +74,15 @@ export default function SimulatorPage() {
   // "Make it real" flow state
   const [destAddress, setDestAddress] = useState("");
   const [pin, setPin] = useState("");
-  const [proposal, setProposal] = useState<{ id: string; status: string } | null>(null);
-  const [signed, setSigned] = useState(false);
+  interface QueuedProposal {
+    id: string;
+    kind: "net" | "fee";
+    amount: string;
+    status: string;
+    signed: boolean;
+  }
+  const [queue, setQueue] = useState<QueuedProposal[] | null>(null);
+  const [feeSplit, setFeeSplit] = useState<{ grossAmount: number; feeAmount: number; netAmount: number; feeBps: number } | null>(null);
   const [txBusy, setTxBusy] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txLog, setTxLog] = useState<string[]>([]);
@@ -169,9 +176,12 @@ export default function SimulatorPage() {
     return "nothing" as Action;
   }, [startBalance, dailyBurn, branches]);
 
-  // --- "Make it real" flow ---
+  // --- "Make it real" flow: monetized via src/lib/fees.ts — see README's
+  // "Oracle Embed" section for the pitch. Creates TWO real proposals (net
+  // + fee) through /api/proposals/recommend, then walks the user through
+  // approve+sign for each in turn, one PIN entry covering both.
 
-  async function createRealProposal() {
+  async function createRecommendation() {
     setTxError(null);
     if (!/^0x[0-9a-fA-F]{40}$/.test(destAddress)) {
       setTxError("Enter a valid 0x… destination address.");
@@ -179,20 +189,27 @@ export default function SimulatorPage() {
     }
     setTxBusy(true);
     try {
-      const res = await fetch("/api/proposals", {
+      const res = await fetch("/api/proposals/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           toAddress: destAddress,
-          amount: decisionAmount.toFixed(2),
+          amount: decisionAmount,
           currency: "CNGN",
           description: "Oracle simulator — spend decision",
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(JSON.stringify(data.error ?? data));
-      setProposal({ id: data.proposal.id, status: data.proposal.status });
-      pushTxLog(`Proposal created: ${data.proposal.id} (${data.proposal.status})`);
+      setFeeSplit(data.split);
+      const items: QueuedProposal[] = [
+        { id: data.netProposal.id, kind: "net", amount: data.netProposal.amount, status: data.netProposal.status, signed: false },
+      ];
+      if (data.feeProposal) {
+        items.push({ id: data.feeProposal.id, kind: "fee", amount: data.feeProposal.amount, status: data.feeProposal.status, signed: false });
+      }
+      setQueue(items);
+      pushTxLog(`Created ${items.length} proposal(s): net ₦${data.split.netAmount.toLocaleString()}, fee ₦${data.split.feeAmount.toLocaleString()} (${data.split.feeBps / 100}%)`);
     } catch (e) {
       setTxError(String((e as Error).message));
     } finally {
@@ -200,40 +217,45 @@ export default function SimulatorPage() {
     }
   }
 
-  async function approveAndSign() {
-    if (!proposal) return;
+  const activeProposal = queue?.find((p) => !p.signed) ?? null;
+  const allSigned = queue !== null && queue.every((p) => p.signed);
+
+  async function approveAndSignActive() {
+    if (!activeProposal) return;
     setTxError(null);
     setTxBusy(true);
     try {
-      const approveRes = await fetch(`/api/proposals/${proposal.id}/approve`, { method: "POST" });
+      const approveRes = await fetch(`/api/proposals/${activeProposal.id}/approve`, { method: "POST" });
       const approveData = await approveRes.json();
       if (!approveRes.ok) throw new Error(JSON.stringify(approveData.error ?? approveData));
-      pushTxLog(`Approved. currentApprovals=${approveData.proposal.currentApprovals}`);
+      pushTxLog(`[${activeProposal.kind}] approved. currentApprovals=${approveData.proposal.currentApprovals}`);
 
-      const payloadRes = await fetch(`/api/proposals/${proposal.id}/sign-payload`);
+      const payloadRes = await fetch(`/api/proposals/${activeProposal.id}/sign-payload`);
       const payload = await payloadRes.json();
       if (!payloadRes.ok) throw new Error(JSON.stringify(payload.error ?? payload));
 
       if (!pin) throw new Error("Enter your wallet PIN to sign.");
       const signature = await signRawDigest(pin, payload.signingPayloadHash);
-      pushTxLog("Signed raw digest client-side (no EIP-191 prefix).");
+      pushTxLog(`[${activeProposal.kind}] signed raw digest client-side (no EIP-191 prefix).`);
 
-      const signRes = await fetch(`/api/proposals/${proposal.id}/sign`, {
+      const signRes = await fetch(`/api/proposals/${activeProposal.id}/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ signature }),
       });
       const signData = await signRes.json();
       if (!signRes.ok) throw new Error(JSON.stringify(signData.error ?? signData));
-      setProposal({ id: proposal.id, status: signData.proposal.status });
-      setSigned(true);
-      pushTxLog(`Submitted. status=${signData.proposal.status}`);
+      pushTxLog(`[${activeProposal.kind}] submitted. status=${signData.proposal.status}`);
+
+      setQueue((q) =>
+        (q ?? []).map((p) => (p.id === activeProposal.id ? { ...p, status: signData.proposal.status, signed: true } : p)),
+      );
 
       // Signature acceptance is not completion: live testing showed status
       // can stay PENDING_* even after both approval and signature are
       // recorded, settling asynchronously. Poll instead of assuming
       // COMPLETED from the /sign response.
-      await pollProposalStatus(proposal.id);
+      await pollProposalStatus(activeProposal.id, activeProposal.kind);
     } catch (e) {
       setTxError(String((e as Error).message));
     } finally {
@@ -241,24 +263,24 @@ export default function SimulatorPage() {
     }
   }
 
-  async function pollProposalStatus(id: string) {
+  async function pollProposalStatus(id: string, kind: "net" | "fee") {
     for (let i = 0; i < 10; i++) {
       await new Promise((r) => setTimeout(r, 2000));
       try {
         const res = await fetch(`/api/proposals/${id}`);
         const data = await res.json();
         if (!res.ok) throw new Error(JSON.stringify(data.error ?? data));
-        pushTxLog(`Polled status: ${data.proposal.status}`);
-        setProposal({ id, status: data.proposal.status });
+        pushTxLog(`[${kind}] polled status: ${data.proposal.status}`);
+        setQueue((q) => (q ?? []).map((p) => (p.id === id ? { ...p, status: data.proposal.status } : p)));
         if (data.proposal.status === "COMPLETED" || data.proposal.status === "FAILED" || data.proposal.status === "REJECTED") {
           return;
         }
       } catch (e) {
-        pushTxLog(`Poll error: ${String((e as Error).message)}`);
+        pushTxLog(`[${kind}] poll error: ${String((e as Error).message)}`);
         return;
       }
     }
-    pushTxLog("Still pending after 10 polls — check back later or inspect the proposal directly.");
+    pushTxLog(`[${kind}] still pending after 10 polls — check back later or inspect the proposal directly.`);
   }
 
   return (
@@ -412,16 +434,17 @@ export default function SimulatorPage() {
         <div className="rounded border border-present/30 bg-black/30 p-6">
           <h2 className="mb-1 font-oracle text-2xl italic">Make it real</h2>
           <p className="mb-4 font-mono text-xs text-white/50">
-            Executes the &quot;spend ₦{decisionAmount.toLocaleString()}&quot; branch as an actual
-            signed BMONI transaction — create → your explicit approval → sign in-browser → submit.
-            Nothing here executes without you clicking Approve.
+            Executes the &quot;spend ₦{decisionAmount.toLocaleString()}&quot; branch as two real
+            signed BMONI transactions — your net transfer, and Oracle&apos;s performance fee
+            (charged only here, only now — nothing is charged for advice you don&apos;t act on).
+            Nothing executes without your explicit approval on each.
           </p>
 
           {!smartWalletAddress && (
             <p className="badge-missing">No smart wallet — onboard first.</p>
           )}
 
-          {smartWalletAddress && !proposal && (
+          {smartWalletAddress && !queue && (
             <div className="space-y-3">
               <input
                 placeholder="Destination address (0x…)"
@@ -431,7 +454,7 @@ export default function SimulatorPage() {
               />
               <button
                 disabled={txBusy}
-                onClick={createRealProposal}
+                onClick={createRecommendation}
                 className="rounded bg-present px-4 py-2 font-mono text-sm text-base disabled:opacity-40"
               >
                 {txBusy ? "Creating…" : `Propose: send ₦${decisionAmount.toLocaleString()}`}
@@ -439,11 +462,24 @@ export default function SimulatorPage() {
             </div>
           )}
 
-          {proposal && !signed && (
+          {queue && feeSplit && (
+            <div className="mb-4 grid grid-cols-2 gap-3 rounded border border-white/10 p-3 font-mono text-xs">
+              <div>
+                <p className="text-white/40">To recipient</p>
+                <p className="text-present">₦{feeSplit.netAmount.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-white/40">Oracle fee ({feeSplit.feeBps / 100}%)</p>
+                <p className="text-risk">₦{feeSplit.feeAmount.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+
+          {activeProposal && (
             <div className="space-y-3">
               <p className="font-mono text-sm">
-                Proposal <span className="text-present">{proposal.id}</span> — status{" "}
-                <span className="text-present">{proposal.status}</span>
+                [{activeProposal.kind}] Proposal <span className="text-present">{activeProposal.id}</span> — ₦
+                {activeProposal.amount} — status <span className="text-present">{activeProposal.status}</span>
               </p>
               <input
                 type="password"
@@ -454,33 +490,33 @@ export default function SimulatorPage() {
               />
               <button
                 disabled={txBusy}
-                onClick={approveAndSign}
+                onClick={approveAndSignActive}
                 className="rounded bg-healthy-future px-4 py-2 font-mono text-sm text-base disabled:opacity-40"
               >
-                {txBusy ? "Working…" : "Approve & sign"}
+                {txBusy ? "Working…" : `Approve & sign [${activeProposal.kind}]`}
               </button>
             </div>
           )}
 
-          {proposal && signed && proposal.status !== "COMPLETED" && (
+          {allSigned && (
             <div className="space-y-2">
-              <p className="font-mono text-sm text-present">
-                Signature submitted — status <span>{proposal.status}</span>, settling asynchronously.
+              <p className="font-mono text-sm text-healthy-future">
+                Both proposals signed and submitted. Settlement is asynchronous — refresh the
+                balance above once BMONI executes them on-chain.
               </p>
+              {queue!.map((p) => (
+                <p key={p.id} className="font-mono text-xs text-white/50">
+                  [{p.kind}] {p.id} — {p.status}
+                </p>
+              ))}
               <button
                 disabled={txBusy}
-                onClick={() => pollProposalStatus(proposal.id)}
+                onClick={() => queue!.forEach((p) => pollProposalStatus(p.id, p.kind))}
                 className="rounded border border-white/30 px-3 py-1.5 font-mono text-xs text-white disabled:opacity-40"
               >
                 Check status again
               </button>
             </div>
-          )}
-
-          {proposal?.status === "COMPLETED" && (
-            <p className="font-mono text-sm text-healthy-future">
-              Executed on-chain. Refresh the balance above to see it move.
-            </p>
           )}
 
           {txError && <p className="mt-3 font-mono text-xs text-risk">{txError}</p>}
