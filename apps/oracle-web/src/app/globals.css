@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #151a2e;
+  --color-present: #e3a548;
+  --color-healthy-future: #4fa98c;
+  --color-risk: #c9594a;
+}
+
+body {
+  background: var(--bg-base);
+}
+
+.font-oracle-voice {
+  font-family: var(--font-newsreader), serif;
+  font-style: italic;
+}
+
+.badge-real {
+  @apply inline-flex items-center gap-1.5 rounded-full border border-healthy-future/40 bg-healthy-future/10 px-2.5 py-0.5 text-xs font-mono uppercase tracking-wider text-healthy-future;
+}
+
+.badge-mock {
+  @apply inline-flex items-center gap-1.5 rounded-full border border-present/40 bg-present/10 px-2.5 py-0.5 text-xs font-mono uppercase tracking-wider text-present;
+}
+
+.badge-missing {
+  @apply inline-flex items-center gap-1.5 rounded-full border border-risk/40 bg-risk/10 px-2.5 py-0.5 text-xs font-mono uppercase tracking-wider text-risk;
+}
